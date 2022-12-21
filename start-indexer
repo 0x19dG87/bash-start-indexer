@@ -1,0 +1,165 @@
+#!/bin/bash
+
+ENV_FILE=".env"
+
+# List of packages to check
+packages=("docker.io" "docker-compose" "bc" "git" "curl" "httpie" "jq" "nano" "wget" "bsdmainutils" "base58" "netcat" "net-tools" "apache2-utils")
+
+# Loop through the list of packages
+for package in "${packages[@]}"; do
+  # Check if the package is installed
+  if dpkg -s "$package" | grep -q "install ok installed"; then
+    echo -n ""
+  else
+    sudo apt install -y $package
+  fi
+done
+
+
+set -a
+source <(cat "$ENV_FILE" | sed -e '/^#/d;/^\s*$/d' -e "s/'/'\\\''/g" -e "s/=\(.*\)/='\1'/g")
+set +a
+
+has_param() {
+    local term="$1"
+    shift
+    for arg; do
+        if [[ $arg == "$term" ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+[ ! -f init/hostname ] && (cd init && bash generate-hostname.sh)
+[ ! -f init/geolocation ] && (cd init && bash generate-geolocation.sh)
+[ ! -f init/upstreams ] && (cd init && bash generate-upstreams.sh)
+
+
+[ -z "$DOMAIN" ] && DOMAIN=$(cat init/hostname) && sed -i "s/DOMAIN=.*/DOMAIN=$DOMAIN@mailinator.com/" "$ENV_FILE"
+[ -z "$EMAIL" ] && sed -i "s/EMAIL=.*/EMAIL=$DOMAIN@mailinator.com/" "$ENV_FILE"
+[ -z "$ADMIN_PASSWORD" ] && ADMIN_PASSWORD=$(date +%s | sha256sum | base64 | head -c 32 ; echo) && sed -i "s/ADMIN_PASSWORD=.*/ADMIN_PASSWORD=$ADMIN_PASSWORD/" "$ENV_FILE"
+[ -z "$DB_PASS" ] && DB_PASS=$(date +%s | sha256sum | base64 | head -c 32 ; echo) && sed -i "s/DB_PASS=.*/DB_PASS=$DB_PASS/" "$ENV_FILE"
+[ -z "$GEO_COORDINATES" ] && GEO_COORDINATES=$(cat init/geolocation) && sed -i "s/GEO_COORDINATES=.*/GEO_COORDINATES=$GEO_COORDINATES/" "$ENV_FILE"
+
+if [ -z "$OPERATOR_SEED_PHRASE_MAINNET" ] && has_param '-m' "$@"
+then
+    echo -e "\e[1;32m Please enter your operator seed phrase for mainnet: \e[0m"
+    read OPERATOR_SEED_PHRASE_MAINNET
+    sed -i "s/OPERATOR_SEED_PHRASE_MAINNET=.*/OPERATOR_SEED_PHRASE_MAINNET=$OPERATOR_SEED_PHRASE_MAINNET/" "$ENV_FILE"
+fi
+
+if [ -z "$STAKING_WALLET_ADDRESS_MAINNET" ] && has_param '-m' "$@"
+then
+    [ ! -f init/staking-wallet-mainnet ] && (cd init && bash generate-staking-wallet-mainnet.sh "$OPERATOR_SEED_PHRASE_MAINNET")    
+    STAKING_WALLET_ADDRESS_MAINNET=$(cat init/staking-wallet-mainnet)
+    sed -i "s/STAKING_WALLET_ADDRESS_MAINNET=.*/STAKING_WALLET_ADDRESS_MAINNET=$STAKING_WALLET_ADDRESS_MAINNET/" "$ENV_FILE"
+fi
+
+if [ -z "$OPERATOR_SEED_PHRASE_TESTNET" ] && has_param '-t' "$@"
+then
+    echo -e "\e[1;32m Please enter your operator seed phrase for testnet: \e[0m"
+    read OPERATOR_SEED_PHRASE_TESTNET
+    sed -i "s/OPERATOR_SEED_PHRASE_TESTNET=.*/OPERATOR_SEED_PHRASE_TESTNET=$OPERATOR_SEED_PHRASE_TESTNET/" "$ENV_FILE"
+fi
+
+if [ -z "$STAKING_WALLET_ADDRESS_TESTNET" ] && has_param '-t' "$@"
+then
+    [ ! -f init/staking-wallet-testnet ] && (cd init && bash generate-staking-wallet-testnet.sh "$OPERATOR_SEED_PHRASE_TESTNET")
+    STAKING_WALLET_ADDRESS_TESTNET=$(cat init/staking-wallet-testnet)
+    sed -i "s/STAKING_WALLET_ADDRESS_TESTNET=.*/STAKING_WALLET_ADDRESS_TESTNET=$STAKING_WALLET_ADDRESS_TESTNET/" "$ENV_FILE"
+fi
+
+if [ -z "$UPSTREAM_RPCS" ]
+then
+    [ ! -f init/upstreams ] && (cd init && bash generate-upstreams.sh)
+    UPSTREAM_RPCS=$(cat init/upstreams)
+    ESCAPED_UPSTREAM_RPCS=$(printf '%s\n' "$UPSTREAM_RPCS" | sed -e 's/[\/&]/\\&/g')
+    sed -i "s/UPSTREAM_RPCS=.*/UPSTREAM_RPCS=$ESCAPED_UPSTREAM_RPCS/" "$ENV_FILE"
+fi
+
+
+# generate the graph-node config file
+
+
+docker run -v $(pwd)/graph-node-configs:/configs --env-file="$ENV_FILE" bhgedigital/envsubst sh -c "envsubst < configs/config.tmpl > configs/config.toml"
+
+
+# contruct the docker compose file from pieces
+
+joinByChar() {
+  local IFS="$1"
+  shift
+  echo "$*"
+}
+
+arrVar=("base.yml" "monitoring.yml" "stakesquid-rpc.yml" )
+
+if has_param '--external-database' "$@";
+then
+    [ -z "$DB_HOST" ] && echo "Please edit the $ENV_FILE to configure your external database manually."
+else
+    arrVar+=("database.yml")
+
+    if has_param '-t' "$@";
+    then
+	arrVar+=("testnet-agent-database.yml")
+    fi
+
+    if has_param '-m' "$@";
+    then
+	arrVar+=("mainnet-agent-database.yml")
+    fi
+fi
+
+if has_param '-t' "$@";
+then
+    arrVar+=("testnet.yml")
+fi
+
+if has_param '-m' "$@";
+then
+    arrVar+=("mainnet.yml")
+fi
+
+
+sed -i "s/COMPOSE_FILE=.*/COMPOSE_FILE=$(joinByChar ':' ${arrVar[@]})/" "$ENV_FILE"
+
+
+# delete config params from our list of parameters for docker-compose
+
+bash_start_params=(-t -m --external-database)
+docker_compose_params=$@
+
+for del in ${bash_start_params[@]}
+do
+   docker_compose_params=("${docker_compose_params[@]/$del}") #Quotes when working with strings
+done
+
+docker-compose up -d --remove-orphans --build ${docker_compose_params[@]}
+
+
+if has_param '-m' "$@";
+then
+    echo " "
+    echo " "
+    echo "Your dashboard for mainnet:"
+    echo " "
+    echo "$DOMAIN/grafana-mainnet"
+fi
+
+if has_param '-t' "$@";
+then
+    echo " "
+    echo " "
+    echo "Your dashboard for testnet:"
+    echo " "
+    echo "$DOMAIN/grafana-testnet"
+fi
+
+echo " "
+echo " "
+echo "Admin: $ADMIN_USER"
+echo "Password: $ADMIN_PASSWORD"
+echo " "
+echo " "

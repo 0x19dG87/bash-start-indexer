@@ -1,0 +1,289 @@
+version: '2.1'
+
+x-logging:
+  &default-logging
+  options:
+    max-file: '1'
+    compress: 'false'
+  driver: local
+
+networks:
+  monitor-net:
+    driver: bridge
+
+volumes:
+    prometheus_data_mainnet: {}
+    grafana_data_mainnet: {}
+
+services:
+
+
+######################################################################################
+#####################         CLI MAINNET CONTAINER            #######################
+######################################################################################
+
+
+  cli-mainnet:
+    build:
+      context: ./cli_mainnet
+    container_name: cli-mainnet
+    restart: unless-stopped
+    environment:
+      GEO_COORDINATES: ${GEO_COORDINATES:-69.42069 69.42069}
+    tty: true
+    networks:
+      - monitor-net
+    logging: *default-logging
+    volumes:
+      - ./cli/scripts:/home/graph/scripts
+
+
+######################################################################################
+#####################    INDEXER SERVICE MAINNET CONTAINER     #######################
+######################################################################################
+
+  indexer-service-mainnet:
+    image: ${INDEXER_SERVICE_MAINNET_VERSION:-ghcr.io/graphprotocol/indexer-service:v0.20.3}
+    container_name: indexer-service-mainnet
+    depends_on:
+      - index-node-0
+      - query-node-0
+      - indexer-agent-mainnet
+    environment:
+      INDEXER_SERVICE_MNEMONIC: ${OPERATOR_SEED_PHRASE_MAINNET}
+      INDEXER_SERVICE_INDEXER_ADDRESS: ${STAKING_WALLET_ADDRESS_MAINNET}
+      INDEXER_SERVICE_PORT: 7600
+      INDEXER_SERVICE_ETHEREUM_NETWORK: mainnet
+      INDEXER_SERVICE_ETHEREUM: ${TXN_RPC_MAINNET}
+      INDEXER_SERVICE_GRAPH_NODE_QUERY_ENDPOINT: http://query-node-0:8000
+      INDEXER_SERVICE_GRAPH_NODE_STATUS_ENDPOINT: http://index-node-0:8030/graphql
+      INDEXER_SERVICE_NETWORK_SUBGRAPH_ENDPOINT: ${INDEXER_SERVICE_NETWORK_SUBGRAPH_ENDPOINT_MAINNET:-https://gateway.thegraph.com/network}
+      INDEXER_SERVICE_NETWORK_SUBGRAPH_DEPLOYMENT: ${NETWORK_SUBGRAPH_DEPLOYMENT_MAINNET}
+      INDEXER_SERVICE_POSTGRES_HOST: ${INDEXER_DB_HOST}
+      INDEXER_SERVICE_POSTGRES_USERNAME: ${DB_USER:-graph-node}
+      INDEXER_SERVICE_POSTGRES_PASSWORD: ${DB_PASS:-db-password}
+      INDEXER_SERVICE_POSTGRES_DATABASE: ${INDEXER_DB_NAME_MAINNET:-indexer-agent-mainnet}
+      INDEXER_SERVICE_WALLET_WORKER_THREADS: ${WORKER_THREADS_PER_INDEXER_SERVICE:-8}
+      #INDEXER_SERVICE_VECTOR_NODE: "http://vector-node:8000"
+      #INDEXER_SERVICE_VECTOR_ROUTER: "vector8BSZxfkr62As6KZX2so4yXuex5XcpPXQ2tYZrBqpub94dAobu7"
+      INDEXER_SERVICE_CLIENT_SIGNER_ADDRESS: "0x982D10c56b8BBbD6e09048F5c5f01b43C65D5aE0"
+      SKIP_EVM_VALIDATION: "true"
+      #VIRTUAL_HOST: ${INDEX_HOST_MAINNET}
+      #VIRTUAL_PORT: 7600
+      #LETSENCRYPT_HOST: ${INDEX_HOST_MAINNET}
+    expose:
+      - 7300
+      - 7600
+    networks:
+      - monitor-net
+    restart: unless-stopped
+    logging: *default-logging
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.middlewares.indexer-mainnet-stripprefix.stripprefix.prefixes=/mainnet"
+      - "traefik.http.services.indexer-mainnet.loadbalancer.server.port=7600"
+      - "traefik.http.routers.indexer-mainnet.entrypoints=websecure"
+      - "traefik.http.routers.indexer-mainnet.tls.certresolver=myresolver"
+      - "traefik.http.routers.indexer-mainnet.rule=Host(`$DOMAIN`) && PathPrefix(`/mainnet`)"
+      - "traefik.http.routers.indexer-mainnet.middlewares=indexer-mainnet-stripprefix"
+
+    
+
+
+
+
+######################################################################################
+#####################       POIFIER MAINNET CONTAINER          #######################
+######################################################################################
+
+  poifier-mainnet:
+    image: poifierss:latest
+    container_name: poifier-mainnet
+    command:
+      - '--poifier-server=https://poifier.io'
+      - '--ethereum-endpoint=${TXN_RPC_MAINNET}'
+      - '--mainnet-subgraph-endpoint=https://gateway.network.thegraph.com/network'
+      - '--graph-node-status-endpoint=http://index-node-0:8030/graphql'
+      - '--mnemonic=${OPERATOR_SEED_PHRASE_MAINNET}'
+      - '--indexer-address=${STAKING_WALLET_ADDRESS_MAINNET}'
+    tty: true
+    networks:
+       - monitor-net
+    restart: unless-stopped
+
+
+
+
+######################################################################################
+#####################    INDEXER AGENT MAINNET CONTAINER       #######################
+######################################################################################
+
+  indexer-agent-mainnet:
+    image: ${INDEXER_AGENT_MAINNET_VERSION:-ghcr.io/graphprotocol/indexer-agent:v0.20.3}
+    container_name: indexer-agent-mainnet
+    depends_on:
+      - index-node-0
+      - query-node-0
+    expose:
+      - 7300
+      - 8000
+      - 8001
+      - 8002
+    environment:
+      INDEXER_AGENT_MNEMONIC: ${OPERATOR_SEED_PHRASE_MAINNET}
+      INDEXER_AGENT_INDEXER_ADDRESS: ${STAKING_WALLET_ADDRESS_MAINNET}
+      INDEXER_AGENT_INDEX_NODE_IDS: "index_node_0"
+      INDEXER_AGENT_INJECT_DAI: "true"
+      INDEXER_AGENT_ALLOCATION_CLAIM_THRESHOLD: ${QUERY_FEE_REBATE_CLAIM_THRESHOLD_MAINNET:-0}
+      INDEXER_AGENT_REBATE_CLAIM_BATCH_THRESHOLD: ${REBATE_CLAIM_BATCH_THRESHOLD_MAINNET:-0}
+      INDEXER_AGENT_ETHEREUM_NETWORK: mainnet
+      INDEXER_AGENT_ETHEREUM: ${TXN_RPC_MAINNET}
+      INDEXER_AGENT_GRAPH_NODE_QUERY_ENDPOINT: http://query-node-0:8000
+      INDEXER_AGENT_GRAPH_NODE_STATUS_ENDPOINT: http://index-node-0:8030/graphql
+      INDEXER_AGENT_GRAPH_NODE_ADMIN_ENDPOINT: http://index-node-0:8020
+      INDEXER_AGENT_PUBLIC_INDEXER_URL: 'https://${DOMAIN}/mainnet/'
+      INDEXER_AGENT_INDEXER_GEO_COORDINATES: ${GEO_COORDINATES:-60.16952 24.93545}
+      INDEXER_AGENT_NETWORK_SUBGRAPH_ENDPOINT: ${INDEXER_AGENT_NETWORK_SUBGRAPH_ENDPOINT_MAINNET:-https://gateway.thegraph.com/network}
+      INDEXER_AGENT_NETWORK_SUBGRAPH_DEPLOYMENT: ${NETWORK_SUBGRAPH_DEPLOYMENT_MAINNET}
+      INDEXER_AGENT_POSTGRES_HOST: ${INDEXER_DB_HOST:-postgres-mainnet-agent}
+      INDEXER_AGENT_POSTGRES_USERNAME: ${DB_USER:-graph-node}
+      INDEXER_AGENT_POSTGRES_PASSWORD: ${DB_PASS:-db-password}
+      INDEXER_AGENT_POSTGRES_DATABASE: ${INDEXER_DB_NAME_MAINNET:-postgres-mainnet-agent}
+      INDEXER_AGENT_DAI_CONTRACT: "0x9e7e607afd22906f7da6f1ec8f432d6f244278be"
+      #INDEXER_AGENT_VECTOR_NODE: "http://vector-node:8000"
+      #INDEXER_AGENT_VECTOR_EVENT_SERVER: "http://indexer-agent:8001"
+      #INDEXER_AGENT_VECTOR_EVENT_SERVER_PORT: 8001
+      #INDEXER_AGENT_VECTOR_ROUTER: "vector8BSZxfkr62As6KZX2so4yXuex5XcpPXQ2tYZrBqpub94dAobu7"
+      INDEXER_AGENT_COLLECT_RECEIPTS_ENDPOINT: https://gateway.thegraph.com/collect-receipts
+      INDEXER_AGENT_OFFCHAIN_SUBGRAPHS: ${INDEXER_AGENT_OFFCHAIN_SUBGRAPHS}
+      INDEXER_AGENT_GAS_PRICE_MAX: ${INDEXER_AGENT_GAS_PRICE_MAX_MAINNET:-50}
+    networks:
+      - monitor-net
+    restart: unless-stopped
+    logging: *default-logging
+
+
+    
+######################################################################################
+#####################        QUERY NODE CONTAINER MAINNET      #######################
+######################################################################################
+
+
+  query-node-0:
+    image: ${GRAPH_NODE_VERSION:-graphprotocol/graph-node:v0.28.2}
+    container_name: query-node-0
+    volumes:
+      - ./graph-node-configs:/root/graph-node-configs/
+    environment:
+      GRAPH_NODE_CONFIG: /root/graph-node-configs/config.toml
+      postgres_host: ${DB_HOST:-postgres}
+      postgres_user: ${DB_USER:-graph-node}
+      postgres_pass: ${DB_PASS:-db-password}
+      postgres_db: ${GRAPH_NODE_DB_NAME:-graph-node}
+      ipfs: '${IPFS_ENDPOINT:-https://ipfs.network.thegraph.com/ipfs/}'
+      node_role: query-node
+      node_id: query_node_0
+      RUST_LOG: INFO
+      GRAPH_LOG: INFO
+      GRAPH_ETH_CALL_GAS: 50000000
+      GRAPH_GETH_ETH_CALL_ERRORS: "out of gas"
+      GRAPH_MAX_GAS_PER_HANDLER: 1000000000000000
+      GRAPH_LOG_QUERY_TIMING: gql
+      EXPERIMENTAL_SUBGRAPH_VERSION_SWITCHING_MODE: synced
+      GRAPH_KILL_IF_UNRESPONSIVE: "true"
+      GRAPH_LOG_QUERY_TIMING: ${GRAPH_LOG_QUERY_TIMING:-gql}
+      GRAPH_ALLOW_NON_DETERMINISTIC_FULLTEXT_SEARCH: ${FULLTEXT_SEARCH:-true}
+      #VIRTUAL_HOST: ${QUERY_HOST_MAINNET}
+      #VIRTUAL_PORT: 8000
+      #LETSENCRYPT_HOST: ${QUERY_HOST_MAINNET}
+    restart: unless-stopped
+    logging:
+        driver: "journald"
+    expose:
+      - 8001
+      - 8000
+      - 8020
+      - 8030
+      - 8040
+    networks:
+      - monitor-net
+
+      
+
+######################################################################################
+#####################     PROMETHEUS MAINNET CONTAINER         #######################
+######################################################################################
+
+
+  prometheus-mainnet:
+    image: prom/prometheus
+    container_name: prometheus-mainnet
+    volumes:
+      - ./prometheus_mainnet:/etc/prometheus
+      - prometheus_data_mainnet:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    expose:
+      - 9090
+    networks:
+      - monitor-net
+    labels:
+      - "org.label-schema.group=monitoring"
+      - "traefik.enable=true"
+      - "traefik.http.middlewares.prometheus-mainnet-stripprefix.stripprefix.prefixes=/prometheus-mainnet"
+      - "traefik.http.services.prometheus-mainnet.loadbalancer.server.port=9090"
+      - "traefik.http.routers.prometheus-mainnet.entrypoints=websecure"
+      - "traefik.http.routers.prometheus-mainnet.tls.certresolver=myresolver"
+      - "traefik.http.routers.prometheus-mainnet.rule=Host(`$DOMAIN`) && PathPrefix(`/prometheus-mainnet`)"
+      - "traefik.http.routers.prometheus-mainnet.middlewares=prometheus-mainnet-stripprefix"      
+    logging: *default-logging
+
+
+
+######################################################################################
+#####################        GRAFANA MAINNET CONTAINER         #######################
+######################################################################################
+
+
+
+  grafana-mainnet:
+    image: grafana/grafana
+    container_name: grafana-mainnet
+    volumes:
+      - grafana_data_mainnet:/var/lib/grafana
+      - ./grafana_mainnet/provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_USER=${ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SECURITY_DISABLE_BRUTE_FORCE_LOGIN_PROTECTION=true
+      - GF_SERVER_ROOT_URL=https://${DOMAIN}/grafana-mainnet
+      - postgres_host=${DB_HOST:-postgres}
+      - postgres_user=${DB_USER:-graph-node}
+      - postgres_pass=${DB_PASS:-db-password}
+      - postgres_db=${GRAPH_NODE_DB_NAME:-graph-node}
+      - GF_INSTALL_PLUGINS=fifemon-graphql-datasource
+      - subgraph_endpoint=${SUBGRAPH_ENDPOINT:-https://gateway.thegraph.com/network}
+    restart: unless-stopped
+    expose:
+      - 3000
+    networks:
+      - monitor-net
+    labels:
+      - "org.label-schema.group=monitoring"
+      - "traefik.enable=true"
+      - "traefik.http.middlewares.grafana-mainnet-stripprefix.stripprefix.prefixes=/grafana-mainnet"
+      - "traefik.http.services.grafana-mainnet.loadbalancer.server.port=3000"
+      - "traefik.http.routers.grafana-mainnet.entrypoints=websecure"
+      - "traefik.http.routers.grafana-mainnet.tls.certresolver=myresolver"
+      - "traefik.http.routers.grafana-mainnet.rule=Host(`$DOMAIN`) && PathPrefix(`/grafana-mainnet`)"
+      - "traefik.http.routers.grafana-mainnet.middlewares=grafana-mainnet-stripprefix"      
+    logging: *default-logging
+
+

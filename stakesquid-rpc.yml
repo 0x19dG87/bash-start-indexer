@@ -1,0 +1,33 @@
+version: '2.1'
+
+x-logging:
+  &default-logging
+  options:
+    max-file: '1'
+    compress: 'false'
+  driver: local
+
+networks:
+  monitor-net:
+    driver: bridge
+
+services:
+
+
+
+######################################################################################
+#####################           RPC PROXY CONTAINER            #######################
+######################################################################################      
+
+
+  rpc:
+    image: stakesquid/eth-proxy:latest
+    restart: always
+    expose:
+      - "8545"
+    ports:
+      - "127.0.0.1:8545:8545"
+    environment:
+      - "UPSTREAM_RPCS=${UPSTREAM_RPCS}"
+    networks:
+      - monitor-net

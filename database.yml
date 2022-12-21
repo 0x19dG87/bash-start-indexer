@@ -1,0 +1,43 @@
+version: '2.1'
+
+x-logging:
+  &default-logging
+  options:
+    max-file: '1'
+    compress: 'false'
+  driver: local
+
+networks:
+  monitor-net:
+    driver: bridge
+
+volumes:
+    postgres_data: {}
+
+services:
+
+######################################################################################
+#####################            POSTGRES CONTAINER            #######################
+######################################################################################
+
+
+
+  postgres:
+    image: postgres:14.5
+    container_name: postgres
+    command: ["postgres", "-c", "shared_preload_libraries=pg_stat_statements"]
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-graph-node}
+      POSTGRES_PASSWORD: ${DB_PASS:-db-password}
+      POSTGRES_DB: ${GRAPH_NODE_DB_NAME:-graph-node}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - monitor-net
+    expose:
+      - 5432
+    logging: *default-logging
+
+
+

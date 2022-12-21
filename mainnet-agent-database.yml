@@ -1,0 +1,42 @@
+version: '2.1'
+
+x-logging:
+  &default-logging
+  options:
+    max-file: '1'
+    compress: 'false'
+  driver: local
+
+networks:
+  monitor-net:
+    driver: bridge
+
+volumes:
+    postgres_mainnet_agent_data: {}
+
+services:
+
+
+######################################################################################
+#####################    POSTGRES AGENT MAINNET CONTAINER      #######################
+######################################################################################
+
+
+
+  postgres-mainnet-agent:
+    image: postgres:14.5
+    container_name: postgres-mainnet-agent
+    command: ["postgres", "-c", "shared_preload_libraries=pg_stat_statements"]
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-graph-node}
+      POSTGRES_PASSWORD: ${DB_PASS:-db-password}
+      POSTGRES_DB: ${AGENT_DB_NAME_TESTNET:-indexer-agent}
+    volumes:
+      - postgres_mainnet_agent_data:/var/lib/postgresql/data
+    networks:
+      - monitor-net
+    expose:
+      - 5432
+    logging: *default-logging
+
