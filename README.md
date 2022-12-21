@@ -66,7 +66,7 @@ ASSUMPTIONS
 ===========
 
 * The indexer runs at home at negligible cost of electricity or the cheapest VPS for $6 [Contabo VPS 200 GB SSD](https://contabo.com/de/vps/vps-s-ssd/?image=ubuntu.267&qty=1&contract=1&storage-type=vps-s-200-gb-ssd)
-* It’s possible to obtain RPC access at $100 per month [provided by StakeSquid on request per Email](mailto:goldberg@stakesquid.com)
+* It’s possible to obtain RPC access at $100 per month [provided by StakeSquid on request per Email](mailto:sebastian@stakesquid.eu)
 * The indexer can max out it’s delegation capacity... to be done. This will be achieved through participation in a liquid staking pool. Pool operators please contact us.
 
 
