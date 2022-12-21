@@ -56,9 +56,9 @@ The following details daily cost and rewards using $0.05 and $0.10 as scenarios 
 | rpc access | | $3.33 | $3.33 | $3.33 |
 | index node | | $0.20 | $0.20 | $0.20 |
 |||||
-| *profit over delegating* | | $-1.15 | $1.23 |
+| **profit over delegating** | | $-1.15 | **$1.23** |
 |||||
-| APR staking | | 1.40% | 14.30% |
+| APR staking | | 1.40% | **14.30%** |
 | APR delegating | | 9.79% | 9.79% |
 
 
