@@ -4,29 +4,33 @@ START INDEXER (1)
 ## NAME
 
 ```
-./start-indexer - Run a graph protocol indexer
+./start
+-bash: ./start: Put your city on the map
 ```
 
 ## SYNOPSIS
 
-**start-indexer** [OPTION]... [FILE]...
+```
+start-indexer [OPTION]... [FILE]...
+```
 
 ## DESCRIPTION
 
 Run a graph protocol indexer on the decentralized network.
 
-**-s, --seed**  
+```
+-s, --seed
     (TBD) seed phrase for the operator wallet
 
-**-t, --testnet**  
+-t, --testnet
   run on testnet
 
-**-m, --mainnet**  
+-m, --mainnet
   run on mainnet
 
-**-a, --api-key**  
+-a, --api-key  
   (TBD) api key to use rpcs from a global provider and register with the local gateway that connects to the staking pool
-
+```
 
 FINANCIALS
 ==========
@@ -64,6 +68,9 @@ ASSUMPTIONS
 * The indexer runs at home at negligible cost of electricity or the cheapest VPS for $6 [Contabo VPS 200 GB SSD](https://contabo.com/de/vps/vps-s-ssd/?image=ubuntu.267&qty=1&contract=1&storage-type=vps-s-200-gb-ssd)
 * It’s possible to obtain RPC access at $100 per month [provided by StakeSquid on request per Email](mailto:goldberg@stakesquid.com)
 * The indexer can max out it’s delegation capacity... to be done. This will be achieved through participation in a liquid staking pool. Pool operators please contact us.
+
+
+
 
 
 
