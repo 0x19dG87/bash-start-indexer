@@ -10,3 +10,13 @@ start
 .obsidian/workspace
 offchain-subgraphs
 .env
+
+init/hostname
+init/upstreams
+init/geolocation
+init/staking-wallet-mainnet
+init/staking-wallet-testnet
+init/
+graph-node-configs/config.toml
+
+*~
