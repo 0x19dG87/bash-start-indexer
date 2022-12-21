@@ -29,7 +29,7 @@ Run a graph protocol indexer on the decentralized network.
          run on mainnet
 
 -a, --api-key  
-         (TBD) api key to use rpcs from a global provider
+         (TBD) api key to use rpcs from different decentralized rpc networks
 ```
 
 FINANCIALS
