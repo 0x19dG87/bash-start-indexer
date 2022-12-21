@@ -20,16 +20,16 @@ Run a graph protocol indexer on the decentralized network.
 
 ```
 -s, --seed
-    (TBD) seed phrase for the operator wallet
+         (TBD) seed phrase for the operator wallet
 
 -t, --testnet
-  run on testnet
+         run on testnet
 
 -m, --mainnet
-  run on mainnet
+         run on mainnet
 
 -a, --api-key  
-  (TBD) api key to use rpcs from a global provider and register with the local gateway that connects to the staking pool
+         (TBD) api key to use rpcs from a global provider
 ```
 
 FINANCIALS
