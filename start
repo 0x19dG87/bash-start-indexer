@@ -1,0 +1,4 @@
+#!/bin/bash
+
+bash start-indexer -t -m $@
+
