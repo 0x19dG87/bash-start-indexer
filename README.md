@@ -11,7 +11,7 @@ START INDEXER (1)
 ## SYNOPSIS
 
 ```
-start-indexer [OPTION]... [FILE]...
+bash start-indexer [OPTION]... [FILE]...
 ```
 
 ## DESCRIPTION
