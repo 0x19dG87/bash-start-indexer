@@ -1,0 +1,22 @@
+It’s late in the year…
+======================
+
+And I waited long to share something that I was working on throughout the year that should be revealed before it gets old. From day one of the start of the decentralized network I was wondering how to get indexers closer to the end users. There never was an incentive to index in remote locations. Economies of scale at large seem to favor Helsinki as the perfect place to run graph indexers. Looking for hosting options abroad didn’t make sense outside of burning free AWS credits for fun - and boy did I burn AWS credits trying to figure what it might cost to run indexers (not even RPCs) in AWS.
+
+Watching other networks over the year I came to the conclusion that 
+a) most node operators loose money which 
+b) drives centralization and 
+c) can only be challenged by incentivizing hosting at home. 
+And this idea stuck with me for a while because we created this docker-compose setup which was the attempt to make it possible for everyone to run a graph indexer on testnet back then on a $50 Hetzner VPS with one click instead of requiring everyone to learn Kubernetes and spend 50 times that on the GCP reference setup.
+
+While everyone is pushing to make things more professional and scalable I feel very comfortable keeping things small and simple. As big as necessary but as small as possible. One thing you can do with small and easy setups is running them from home on a $500 computer using your 100 MBit/s FTTH connection. And I think it’s beneficial to get there. For one in most networks the only way to earn money is to run from home by now. Or to put it differently: Home nodes get shutdown last in bear markets. Second in a way graph indexers act similar to caches. And if you live in a country with shitty international bandwidth like probably 99% of the worlds population then FaceTube and Netflix most likely feed you from local caches. Web3 will likely go the same route but using incentives we can actually take it to the extreme.
+
+The best way for a client who wants to access a subgraph would be to query the node from his neighbor, saving scarce international bandwidth and allowing the smallest latency and ultimately cost. While it’s easy for web3 protocols that build on subgraphs to run their own graph node instance and serve their users from that central server, it’s impossible for each one of them to get as close to their customers as a decentralized network like graph protocol can get if people take the nodes home. That’s a service worth paying for and I strongly believe that this can deliver the 10x improvement over the status quo that we were waiting for.
+
+I created bash-start to start the journey with that target in mind. 
+
+„bash start“ was internally our term for restarting the indexer … „did you try to bash start it again??“ - because we literally made it that simple to get going. Today bash-start is the name of a project that tries to extend on that simplicity by solving more pain points of graph indexers. The most pressing other component that is needed by every indexer is RPCs and in future it will be many of them. Bash-start aims to provide an affordable option for everyone to access RPCs that are not only available in Central Europe but in every region around the world where demand takes them. Auto-configured and wired up with graph-node so that it should be possible to get started indexing subgraphs on every supported network by entering „./start“ on the command line and answering some questions.
+
+This comes at a small cost as RPCs are not free but those are not as ridiculous as infura would charge. The aim is to support every network that will be supported by the graph protocol starting with the MIPs program. The ultimate goal is to allow indexers with the minimum stake of 100k to operate profitably. For this there need to be a few components. First of all those indexers need to max out their delegation capacity. Second more gateways are needed to support routing queries from clients to indexers in the same city. And third the allocation to subgraphs has to be guided by local demand and therefore driven by metrics that only gateways can provide. And frankly I don’t have answers to every detail question but I want to commit the coming year to the design of solutions. 
+
+Follow along with me on [http://www.bash-st.art](http://www.bash-st.art)  write me DMs on Discord to Goldberg | StakeSquid#5271 or emails to [goldberg@stakesquid.com](mailto:goldberg@stakesquid.com) and let’s see how far we can get.
