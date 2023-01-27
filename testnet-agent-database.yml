@@ -24,14 +24,14 @@ services:
 
 
   postgres-testnet-agent:
-    image: postgres:14.5
+    image: postgres:15.1
     container_name: postgres-testnet-agent
     command: ["postgres", "-c", "shared_preload_libraries=pg_stat_statements"]
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${DB_USER:-graph-node}
       POSTGRES_PASSWORD: ${DB_PASS:-db-password}
-      POSTGRES_DB: ${AGENT_DB_NAME_TESTNET:-indexer-agent}
+      POSTGRES_DB: ${INDEXER_DB_NAME_TESTNET:-indexer-agent-testnet}
     volumes:
       - postgres_testnet_agent_data:/var/lib/postgresql/data
     networks:

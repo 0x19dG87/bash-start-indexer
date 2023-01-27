@@ -1,7 +1,2 @@
 #!/bin/bash
-
-echo "-bash: ./start: Put your city on the map"
-echo " "
-
 bash start-indexer -t -m $@
-

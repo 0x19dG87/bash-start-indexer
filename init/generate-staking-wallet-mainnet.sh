@@ -4,11 +4,18 @@
 #			      docker run -v "$tmpfile":/seed.txt node bash -c "npm install -g @ethersproject/cli && ethers --account /seed.txt --rpc https://rpc.ankr.com/eth info" && rm "$tmpfile")
 
 OPERATOR_WALLET_MAINNET=$(tmpfile=$(mktemp) && echo "$1" > "$tmpfile" && \
-			      docker run -v "$tmpfile":/seed.txt node bash -c "npm install -g @ethersproject/cli && ethers --account /seed.txt --rpc https://rpc.ankr.com/eth info" && rm "$tmpfile")
+			      docker run -v "$tmpfile":/seed.txt node:alpine /bin/sh -c "npm install -g @ethersproject/cli && ethers --account /seed.txt --rpc https://rpc.ankr.com/eth info" && rm "$tmpfile")
 
 OPERATOR_WALLET_ADDRESS_MAINNET=$(echo "$OPERATOR_WALLET_MAINNET" | grep Address: | grep -o -E '0x[a-fA-F0-9]{40}' | tr '[:upper:]' '[:lower:]')
 OPERATOR_WALLET_BALANCE_MAINNET=$(echo "$OPERATOR_WALLET_MAINNET" | grep Balance: | grep -o -E '([0-9]+\.[0-9]+)')
 
+echo "here"
+
+if [ -z "$OPERATOR_WALLET_ADDRESS_MAINNET" ]
+then
+	echo "No opperator wallet found. Wrong seed phrase." 1>&2
+	exit 64
+fi
 
 #QUERY="{graphAccount(id: \"$OPERATOR_WALLET_ADDRESS_MAINNET\") {id operatorOf {indexer {account {id}}}}}"
 
@@ -25,7 +32,13 @@ then
     echo "Please refill your operator wallet!"
 fi
 
-echo "Your staking wallet address is $STAKING_WALLET_ADDRESS_MAINNET."
+if [ -z "$STAKING_WALLET_ADDRESS_MAINNET" ]
+then
+	echo -e "\e[1;32m Please enter your staking wallet address for mainnet: \e[0m"
+    read STAKING_WALLET_ADDRESS_MAINNET
+else
+	echo "Your staking wallet address is $STAKING_WALLET_ADDRESS_MAINNET."
+fi
 
 echo "$STAKING_WALLET_ADDRESS_MAINNET" > staking-wallet-mainnet
 

@@ -43,12 +43,12 @@ services:
 ######################################################################################
 
   indexer-service-testnet:
-    image: ${INDEXER_SERVICE_TESTNET_VERSION:-ghcr.io/graphprotocol/indexer-service:v0.20.5-alpha.1}
+    image: ${INDEXER_SERVICE_TESTNET_VERSION:-ghcr.io/graphprotocol/indexer-service:v0.20.8}
     container_name: indexer-service-testnet
     depends_on:
       - index-node-0
       - query-node-1
-      - indexer-agent-testnet
+      - postgres-testnet-agent
     environment:
       INDEXER_SERVICE_MNEMONIC: ${OPERATOR_SEED_PHRASE_TESTNET}
       INDEXER_SERVICE_INDEXER_ADDRESS: ${STAKING_WALLET_ADDRESS_TESTNET}
@@ -59,18 +59,18 @@ services:
       INDEXER_SERVICE_GRAPH_NODE_STATUS_ENDPOINT: http://index-node-0:8030/graphql
       INDEXER_SERVICE_NETWORK_SUBGRAPH_ENDPOINT: ${INDEXER_SERVICE_NETWORK_SUBGRAPH_ENDPOINT_TESTNET:-https://gateway.testnet.thegraph.com/network}
       INDEXER_SERVICE_NETWORK_SUBGRAPH_DEPLOYMENT: ${NETWORK_SUBGRAPH_DEPLOYMENT_TESTNET}
-      INDEXER_SERVICE_POSTGRES_HOST: ${INDEXER_DB_HOST}
+      INDEXER_SERVICE_POSTGRES_HOST: ${INDEXER_DB_HOST:-postgres-testnet-agent}
       INDEXER_SERVICE_POSTGRES_USERNAME: ${DB_USER:-graph-node}
       INDEXER_SERVICE_POSTGRES_PASSWORD: ${DB_PASS:-db-password}
-      INDEXER_SERVICE_POSTGRES_DATABASE: ${INDEXER_DB_NAME_TESTNET:-postgres-testnet-agent}
+      INDEXER_SERVICE_POSTGRES_DATABASE: ${INDEXER_DB_NAME_TESTNET:-indexer-agent-testnet}
       INDEXER_SERVICE_WALLET_WORKER_THREADS: ${WORKER_THREADS_PER_INDEXER_SERVICE:-8}
       #INDEXER_SERVICE_VECTOR_NODE: "http://vector-node:8000"
       #INDEXER_SERVICE_VECTOR_ROUTER: "vector8BSZxfkr62As6KZX2so4yXuex5XcpPXQ2tYZrBqpub94dAobu7"
       INDEXER_SERVICE_CLIENT_SIGNER_ADDRESS: "0xe1EC4339019eC9628438F8755f847e3023e4ff9c"
       SKIP_EVM_VALIDATION: "true"
-      VIRTUAL_HOST: ${INDEX_HOST_TESTNET}
-      VIRTUAL_PORT: 7600
-      LETSENCRYPT_HOST: ${INDEX_HOST_TESTNET}
+      # VIRTUAL_HOST: ${INDEX_HOST_TESTNET}
+      # VIRTUAL_PORT: 7600
+      # LETSENCRYPT_HOST: ${INDEX_HOST_TESTNET}
     expose:
       - 7300
       - 7600
@@ -94,22 +94,21 @@ services:
 ######################################################################################
 
   poifier-testnet:
-    image: poifierss:latest
+    image: grassets/poifier-client:latest
     container_name: poifier-testnet
-    environment:
-      OPERATOR_SEED_PHRASE_TESTNET: ${OPERATOR_SEED_PHRASE_TESTNET}
-      STAKING_WALLET_ADDRESS_TESTNET: ${STAKING_WALLET_ADDRESS_TESTNET3}
+    depends_on:
+      - index-node-0
     command:
       - '--poifier-server=https://goerli.poifier.io'
-      - '--ethereum-endpoint=${TXN_RPC_TESTNET}'
-      - '--mainnet-subgraph-endpoint=https://gateway.testnet.thegraph.com/network'
       - '--graph-node-status-endpoint=http://index-node-0:8030/graphql'
-      - "--mnemonic=${OPERATOR_SEED_PHRASE_TESTNET}"
-      - "--indexer-address=${STAKING_WALLET_ADDRESS_TESTNET}"
+      - '--mnemonic=${OPERATOR_SEED_PHRASE_TESTNET}'
+      - '--indexer-address=${STAKING_WALLET_ADDRESS_TESTNET}'
+      - '--indexer-agent-epoch-subgraph-endpoint=${INDEXER_AGENT_EPOCH_SUBGRAPH_ENDPOINT_TESTNET:-https://api.thegraph.com/subgraphs/name/graphprotocol/goerli-epoch-block-oracle}'
     tty: true
     networks:
        - monitor-net
     restart: unless-stopped
+    logging: *default-logging
       
 
 ######################################################################################
@@ -117,11 +116,12 @@ services:
 ######################################################################################
 
   indexer-agent-testnet:
-    image: ${INDEXER_AGENT_TESTNET_VERSION:-ghcr.io/graphprotocol/indexer-agent:v0.20.5-alpha.1}
+    image: ${INDEXER_AGENT_TESTNET_VERSION:-ghcr.io/graphprotocol/indexer-agent:v0.20.8}
     container_name: indexer-agent-testnet
     depends_on:
       - index-node-0
       - query-node-1
+      - postgres-testnet-agent
     expose:
       - 7300
       - 8000
@@ -147,7 +147,7 @@ services:
       INDEXER_AGENT_POSTGRES_HOST: ${INDEXER_DB_HOST:-postgres-testnet-agent}
       INDEXER_AGENT_POSTGRES_USERNAME: ${DB_USER:-graph-node}
       INDEXER_AGENT_POSTGRES_PASSWORD: ${DB_PASS:-db-password}
-      INDEXER_AGENT_POSTGRES_DATABASE: ${INDEXER_DB_NAME_TESTNET:-postgres-testnet-agent}
+      INDEXER_AGENT_POSTGRES_DATABASE: ${INDEXER_DB_NAME_TESTNET:-indexer-agent-testnet}
       INDEXER_AGENT_DAI_CONTRACT: "0x9e7e607afd22906f7da6f1ec8f432d6f244278be"
       #INDEXER_AGENT_VECTOR_NODE: "http://vector-node:8000"
       #INDEXER_AGENT_VECTOR_EVENT_SERVER: "http://indexer-agent:8001"
@@ -169,8 +169,10 @@ services:
 
 
   query-node-1:
-    image: ${GRAPH_NODE_VERSION:-graphprotocol/graph-node:v0.27.0}
+    image: ${GRAPH_NODE_VERSION:-graphprotocol/graph-node:v0.29.0}
     container_name: query-node-1
+    depends_on:
+      - postgres
     volumes:
       - ./graph-node-configs:/root/graph-node-configs/
     environment:
@@ -196,8 +198,7 @@ services:
       #VIRTUAL_PORT: 8000
       #LETSENCRYPT_HOST: ${QUERY_HOST_TESTNET}
     restart: unless-stopped
-    logging:
-        driver: "journald"
+    logging: *default-logging
     expose:
       - 8001
       - 8000
@@ -254,6 +255,8 @@ services:
   grafana-testnet:
     image: grafana/grafana
     container_name: grafana-testnet
+    depends_on:
+      - postgres
     volumes:
       - grafana_data_testnet:/var/lib/grafana
       - ./grafana_testnet/provisioning:/etc/grafana/provisioning

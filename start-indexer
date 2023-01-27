@@ -33,15 +33,76 @@ has_param() {
     return 1
 }
 
-[ ! -f init/hostname ] && (cd init && bash generate-hostname.sh)
+# [ ! -f init/hostname ] && (cd init && bash generate-hostname.sh)
 [ ! -f init/geolocation ] && (cd init && bash generate-geolocation.sh)
-[ ! -f init/upstreams ] && (cd init && bash generate-upstreams.sh)
+# [ ! -f init/upstreams ] && (cd init && bash generate-upstreams.sh)
 
 
-[ -z "$DOMAIN" ] && DOMAIN=$(cat init/hostname) && sed -i "s/DOMAIN=.*/DOMAIN=$DOMAIN@mailinator.com/" "$ENV_FILE"
+# [ -z "$DOMAIN" ] && DOMAIN=$(cat init/hostname) && sed -i "s/DOMAIN=.*/DOMAIN=$DOMAIN@mailinator.com/" "$ENV_FILE"
+if [ -z "$DOMAIN" ]
+then
+    echo -e "\e[1;32m Please enter your indexer domain: \e[0m"
+    read DOMAIN
+    sed -i "s/DOMAIN=.*/DOMAIN=$DOMAIN/" "$ENV_FILE"
+fi
 [ -z "$EMAIL" ] && sed -i "s/EMAIL=.*/EMAIL=$DOMAIN@mailinator.com/" "$ENV_FILE"
-[ -z "$ADMIN_PASSWORD" ] && ADMIN_PASSWORD=$(date +%s | sha256sum | base64 | head -c 32 ; echo) && sed -i "s/ADMIN_PASSWORD=.*/ADMIN_PASSWORD=$ADMIN_PASSWORD/" "$ENV_FILE"
-[ -z "$DB_PASS" ] && DB_PASS=$(date +%s | sha256sum | base64 | head -c 32 ; echo) && sed -i "s/DB_PASS=.*/DB_PASS=$DB_PASS/" "$ENV_FILE"
+
+if [ -z "$ADMIN_USER" ]
+then
+    echo -e "\e[1;32m Please enter your Graphana user or leave empty: \e[0m"
+    read ADMIN_USER
+    [ -z "$ADMIN_USER" ] && ADMIN_USER=admin
+    sed -i "s/ADMIN_USER=.*/ADMIN_USER=$ADMIN_USER/" "$ENV_FILE"
+fi
+
+if [ -z "$ADMIN_PASSWORD" ]
+then
+    echo -e "\e[1;32m Please enter your Graphana password or leave empty: \e[0m"
+    read ADMIN_PASSWORD
+    [ -z "$ADMIN_PASSWORD" ] && ADMIN_PASSWORD=$(date +%s | sha256sum | base64 | head -c 32 ; echo)
+    sed -i "s/ADMIN_PASSWORD=.*/ADMIN_PASSWORD=$ADMIN_PASSWORD/" "$ENV_FILE"
+fi
+
+if [ -z "$DB_USER" ]
+then
+    echo -e "\e[1;32m Please enter your DB user or leave empty: \e[0m"
+    read DB_USER
+    [ -z "$DB_USER" ] && DB_USER=admin
+    sed -i "s/DB_USER=.*/DB_USER=$DB_USER/" "$ENV_FILE"
+fi
+
+if [ -z "$DB_PASS" ]
+then
+    echo -e "\e[1;32m Please enter your DB password or leave empty: \e[0m"
+    read DB_PASS
+    [ -z "$DB_PASS" ] && DB_PASS=$(date +%s | sha256sum | base64 | head -c 32 ; echo)
+    sed -i "s/DB_PASS=.*/DB_PASS=$DB_PASS/" "$ENV_FILE"
+fi
+
+if [ -z "$GRAPH_NODE_DB_NAME" ]
+then
+    echo -e "\e[1;32m Please enter name of the database used by the Index/Query nodes or leave empty: \e[0m"
+    read GRAPH_NODE_DB_NAME
+    [ -z "$GRAPH_NODE_DB_NAME" ] && GRAPH_NODE_DB_NAME=graph-node
+    sed -i "s/GRAPH_NODE_DB_NAME=.*/GRAPH_NODE_DB_NAME=$GRAPH_NODE_DB_NAME/" "$ENV_FILE"
+fi
+
+if [ -z "$INDEXER_DB_NAME_MAINNET" ] && has_param '-m' "$@"
+then
+    echo -e "\e[1;32m Please enter the name of the database used by the mainnet Indexer agent/service nodes or leave empty: \e[0m"
+    read INDEXER_DB_NAME_MAINNET
+    [ -z "$INDEXER_DB_NAME_MAINNET" ] && INDEXER_DB_NAME_MAINNET=indexer-agent-mainnet
+    sed -i "s/INDEXER_DB_NAME_MAINNET=.*/INDEXER_DB_NAME_MAINNET=$INDEXER_DB_NAME_MAINNET/" "$ENV_FILE"
+fi
+
+if [ -z "$INDEXER_DB_NAME_TESTNET" ] && has_param '-t' "$@"
+then
+    echo -e "\e[1;32m Please enter the name of the database used by the testnet Indexer agent/service nodes or leave empty: \e[0m"
+    read INDEXER_DB_NAME_TESTNET
+    [ -z "$INDEXER_DB_NAME_TESTNET" ] && INDEXER_DB_NAME_TESTNET=indexer-agent-testnet
+    sed -i "s/INDEXER_DB_NAME_TESTNET=.*/INDEXER_DB_NAME_TESTNET=$INDEXER_DB_NAME_TESTNET/" "$ENV_FILE"
+fi
+
 [ -z "$GEO_COORDINATES" ] && GEO_COORDINATES=$(cat init/geolocation) && sed -i "s/GEO_COORDINATES=.*/GEO_COORDINATES=$GEO_COORDINATES/" "$ENV_FILE"
 
 if [ -z "$OPERATOR_SEED_PHRASE_MAINNET" ] && has_param '-m' "$@"
@@ -54,6 +115,7 @@ fi
 if [ -z "$STAKING_WALLET_ADDRESS_MAINNET" ] && has_param '-m' "$@"
 then
     [ ! -f init/staking-wallet-mainnet ] && (cd init && bash generate-staking-wallet-mainnet.sh "$OPERATOR_SEED_PHRASE_MAINNET")    
+    [ ! -f init/staking-wallet-mainnet ] && exit 1
     STAKING_WALLET_ADDRESS_MAINNET=$(cat init/staking-wallet-mainnet)
     sed -i "s/STAKING_WALLET_ADDRESS_MAINNET=.*/STAKING_WALLET_ADDRESS_MAINNET=$STAKING_WALLET_ADDRESS_MAINNET/" "$ENV_FILE"
 fi
@@ -67,25 +129,69 @@ fi
 
 if [ -z "$STAKING_WALLET_ADDRESS_TESTNET" ] && has_param '-t' "$@"
 then
-    [ ! -f init/staking-wallet-testnet ] && (cd init && bash generate-staking-wallet-testnet.sh "$OPERATOR_SEED_PHRASE_TESTNET")
+    [ ! -f init/staking-wallet-testnet ] && (cd init && bash generate-staking-wallet-testnet.sh "$OPERATOR_SEED_PHRASE_TESTNET" || exit 2)
+    [ ! -f init/staking-wallet-testnet ] && exit 1
     STAKING_WALLET_ADDRESS_TESTNET=$(cat init/staking-wallet-testnet)
     sed -i "s/STAKING_WALLET_ADDRESS_TESTNET=.*/STAKING_WALLET_ADDRESS_TESTNET=$STAKING_WALLET_ADDRESS_TESTNET/" "$ENV_FILE"
 fi
 
-if [ -z "$UPSTREAM_RPCS" ]
+if [ -z "$TXN_RPC_MAINNET" ] && has_param '-m' "$@"
 then
-    [ ! -f init/upstreams ] && (cd init && bash generate-upstreams.sh)
-    UPSTREAM_RPCS=$(cat init/upstreams)
-    ESCAPED_UPSTREAM_RPCS=$(printf '%s\n' "$UPSTREAM_RPCS" | sed -e 's/[\/&]/\\&/g')
-    sed -i "s/UPSTREAM_RPCS=.*/UPSTREAM_RPCS=$ESCAPED_UPSTREAM_RPCS/" "$ENV_FILE"
+    echo -e "\e[1;32m Please enter your mainnet (ethereum) rpc: \e[0m"
+    read TXN_RPC_MAINNET
+    RPC_MAINNET_SYNC_RESULT=$(curl $TXN_RPC_MAINNET -X POST --data '{"method":"eth_syncing","params":[],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json")
+    if [[ $RPC_MAINNET_SYNC_RESULT =~ "jsonrpc" ]]
+    then
+        sed -i "s/TXN_RPC_MAINNET=.*/TXN_RPC_MAINNET=${TXN_RPC_MAINNET//\//\\\/}/" "$ENV_FILE"
+    else 
+        echo "Bad mainnet (ethereum) rpc > $TXN_RPC_MAINNET!"
+        exit 1
+    fi
 fi
 
+if [ -z "$TXN_RPC_TESTNET" ] && has_param '-m' "$@"
+then
+    echo -e "\e[1;32m Please enter your testnet (goerli) rpc: \e[0m"
+    read TXN_RPC_TESTNET
+    RPC_TESTNET_SYNC_RESULT=$(curl $TXN_RPC_TESTNET -X POST --data '{"method":"eth_syncing","params":[],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json")
+    if [[ $RPC_TESTNET_SYNC_RESULT =~ "jsonrpc" ]]
+    then
+        sed -i "s/TXN_RPC_TESTNET=.*/TXN_RPC_TESTNET=${TXN_RPC_TESTNET//\//\\\/}/" "$ENV_FILE"
+    else 
+        echo "Bad testnet (goerli) rpc > $TXN_RPC_TESTNET!"
+        exit 1
+    fi
+fi
 
 # generate the graph-node config file
 
+if [ ! -f $(pwd)/graph-node-configs/config.toml ]
+then
+    while [ 1==1 ]
+    do 
+        echo -e "\e[1;32m Please enter your chain name: \e[0m"
+        read CHAIN_NAME
+        echo -e "\e[1;32m Please enter your chain rpc: \e[0m"
+        read CHAIN_RPC
+        RPC_CHAIN_SYNC_RESULT=$(curl $CHAIN_RPC -X POST --data '{"method":"eth_syncing","params":[],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json")
+        if [[ $RPC_CHAIN_SYNC_RESULT =~ "jsonrpc" ]]
+        then
+            docker run -v $(pwd)/graph-node-configs:/configs -e CHAIN_NAME=$CHAIN_NAME -e CHAIN_RPC=$CHAIN_RPC bhgedigital/envsubst sh -c "envsubst < configs/chain.tmpl > configs/chain.$CHAIN_NAME.toml"
+        else 
+            echo "Bad $CHAIN_NAME rpc > $CHAIN_RPC. Chain was not added!"
+        fi
 
-docker run -v $(pwd)/graph-node-configs:/configs --env-file="$ENV_FILE" bhgedigital/envsubst sh -c "envsubst < configs/config.tmpl > configs/config.toml"
-
+        echo -e "\e[1;32m Add new chain (y): \e[0m"
+        read ADD_NEW_CHAIN
+        if [[ $ADD_NEW_CHAIN != [yY] ]]
+        then
+            break
+        fi
+    done
+    for i in $(find $(pwd) -name chain.*.toml);do CHAINS+="$(cat $i)\n\n";rm $i;done
+    docker run -v $(pwd)/graph-node-configs:/configs --env-file="$ENV_FILE" bhgedigital/envsubst sh -c "envsubst < configs/config.tmpl > configs/config.toml"
+    sed -i "9 a $CHAINS" $(pwd)/graph-node-configs/config.toml
+fi
 
 # contruct the docker compose file from pieces
 
@@ -95,7 +201,7 @@ joinByChar() {
   echo "$*"
 }
 
-arrVar=("base.yml" "monitoring.yml" "stakesquid-rpc.yml" )
+arrVar=("base.yml" "monitoring.yml")
 
 if has_param '--external-database' "$@";
 then
@@ -128,17 +234,18 @@ fi
 sed -i "s/COMPOSE_FILE=.*/COMPOSE_FILE=$(joinByChar ':' ${arrVar[@]})/" "$ENV_FILE"
 
 
-# delete config params from our list of parameters for docker-compose
+IFS=':' read -ra FILES <<< ${COMPOSE_FILE}
+for i in "${FILES[@]}"; do STARTUP+="-f $(pwd)/$i "; done
 
-bash_start_params=(-t -m --external-database)
-docker_compose_params=$@
-
-for del in ${bash_start_params[@]}
-do
-   docker_compose_params=("${docker_compose_params[@]/$del}") #Quotes when working with strings
+for arg do
+  shift
+  [ "$arg" = "-t" ] || [ "$arg" = "-m" ] || [ "$arg" = "-d" ] || [ "$arg" = "--remove-orphans" ] || [ "$arg" = "--build" ]  && continue
+  set -- "$@" "$arg"
 done
 
-docker-compose up -d --remove-orphans --build ${docker_compose_params[@]}
+echo $STARTUP;
+
+docker-compose ${STARTUP} up -d --remove-orphans --build ${@}
 
 
 if has_param '-m' "$@";

@@ -12,7 +12,7 @@ FULL_NODE=$5
 timestamp=$(date +%s)
 FILENAME="${SUBGRAPH}-${timestamp}"
 
-QUERY_NODE_STATUS_ENDPOINT=http://query-node-0:8030/graphql
+QUERY_NODE_STATUS_ENDPOINT=http://query-node-1:8030/graphql
 SUCCESSFUL_VERIFICATIONS=0
 FAILED_VERIFICATIONS=0
 

@@ -43,12 +43,12 @@ services:
 ######################################################################################
 
   indexer-service-mainnet:
-    image: ${INDEXER_SERVICE_MAINNET_VERSION:-ghcr.io/graphprotocol/indexer-service:v0.20.3}
+    image: ${INDEXER_SERVICE_MAINNET_VERSION:-ghcr.io/graphprotocol/indexer-service:v0.20.8}
     container_name: indexer-service-mainnet
     depends_on:
       - index-node-0
       - query-node-0
-      - indexer-agent-mainnet
+      - postgres-mainnet-agent
     environment:
       INDEXER_SERVICE_MNEMONIC: ${OPERATOR_SEED_PHRASE_MAINNET}
       INDEXER_SERVICE_INDEXER_ADDRESS: ${STAKING_WALLET_ADDRESS_MAINNET}
@@ -59,7 +59,7 @@ services:
       INDEXER_SERVICE_GRAPH_NODE_STATUS_ENDPOINT: http://index-node-0:8030/graphql
       INDEXER_SERVICE_NETWORK_SUBGRAPH_ENDPOINT: ${INDEXER_SERVICE_NETWORK_SUBGRAPH_ENDPOINT_MAINNET:-https://gateway.thegraph.com/network}
       INDEXER_SERVICE_NETWORK_SUBGRAPH_DEPLOYMENT: ${NETWORK_SUBGRAPH_DEPLOYMENT_MAINNET}
-      INDEXER_SERVICE_POSTGRES_HOST: ${INDEXER_DB_HOST}
+      INDEXER_SERVICE_POSTGRES_HOST: ${INDEXER_DB_HOST:-postgres-mainnet-agent}
       INDEXER_SERVICE_POSTGRES_USERNAME: ${DB_USER:-graph-node}
       INDEXER_SERVICE_POSTGRES_PASSWORD: ${DB_PASS:-db-password}
       INDEXER_SERVICE_POSTGRES_DATABASE: ${INDEXER_DB_NAME_MAINNET:-indexer-agent-mainnet}
@@ -97,19 +97,21 @@ services:
 ######################################################################################
 
   poifier-mainnet:
-    image: poifierss:latest
+    image: grassets/poifier-client:latest
     container_name: poifier-mainnet
+    depends_on:
+      - index-node-0
     command:
       - '--poifier-server=https://poifier.io'
-      - '--ethereum-endpoint=${TXN_RPC_MAINNET}'
-      - '--mainnet-subgraph-endpoint=https://gateway.network.thegraph.com/network'
       - '--graph-node-status-endpoint=http://index-node-0:8030/graphql'
       - '--mnemonic=${OPERATOR_SEED_PHRASE_MAINNET}'
       - '--indexer-address=${STAKING_WALLET_ADDRESS_MAINNET}'
+      - '--indexer-agent-epoch-subgraph-endpoint=${INDEXER_AGENT_EPOCH_SUBGRAPH_ENDPOINT_MAINNET:-https://api.thegraph.com/subgraphs/name/graphprotocol/mainnet-epoch-block-oracle}'
     tty: true
     networks:
        - monitor-net
     restart: unless-stopped
+    logging: *default-logging
 
 
 
@@ -119,11 +121,12 @@ services:
 ######################################################################################
 
   indexer-agent-mainnet:
-    image: ${INDEXER_AGENT_MAINNET_VERSION:-ghcr.io/graphprotocol/indexer-agent:v0.20.3}
+    image: ${INDEXER_AGENT_MAINNET_VERSION:-ghcr.io/graphprotocol/indexer-agent:v0.20.8}
     container_name: indexer-agent-mainnet
     depends_on:
       - index-node-0
       - query-node-0
+      - postgres-mainnet-agent
     expose:
       - 7300
       - 8000
@@ -148,7 +151,7 @@ services:
       INDEXER_AGENT_POSTGRES_HOST: ${INDEXER_DB_HOST:-postgres-mainnet-agent}
       INDEXER_AGENT_POSTGRES_USERNAME: ${DB_USER:-graph-node}
       INDEXER_AGENT_POSTGRES_PASSWORD: ${DB_PASS:-db-password}
-      INDEXER_AGENT_POSTGRES_DATABASE: ${INDEXER_DB_NAME_MAINNET:-postgres-mainnet-agent}
+      INDEXER_AGENT_POSTGRES_DATABASE: ${INDEXER_DB_NAME_MAINNET:-indexer-agent-mainnet}
       INDEXER_AGENT_DAI_CONTRACT: "0x9e7e607afd22906f7da6f1ec8f432d6f244278be"
       #INDEXER_AGENT_VECTOR_NODE: "http://vector-node:8000"
       #INDEXER_AGENT_VECTOR_EVENT_SERVER: "http://indexer-agent:8001"
@@ -170,8 +173,10 @@ services:
 
 
   query-node-0:
-    image: ${GRAPH_NODE_VERSION:-graphprotocol/graph-node:v0.28.2}
+    image: ${GRAPH_NODE_VERSION:-graphprotocol/graph-node:v0.29.0}
     container_name: query-node-0
+    depends_on:
+      - postgres
     volumes:
       - ./graph-node-configs:/root/graph-node-configs/
     environment:
@@ -197,8 +202,7 @@ services:
       #VIRTUAL_PORT: 8000
       #LETSENCRYPT_HOST: ${QUERY_HOST_MAINNET}
     restart: unless-stopped
-    logging:
-        driver: "journald"
+    logging: *default-logging
     expose:
       - 8001
       - 8000
@@ -255,6 +259,8 @@ services:
   grafana-mainnet:
     image: grafana/grafana
     container_name: grafana-mainnet
+    depends_on:
+      - postgres
     volumes:
       - grafana_data_mainnet:/var/lib/grafana
       - ./grafana_mainnet/provisioning:/etc/grafana/provisioning
