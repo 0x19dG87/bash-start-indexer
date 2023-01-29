@@ -11,8 +11,10 @@ networks:
   monitor-net:
     driver: bridge
 
-services:
+volumes:
+  traefik_letsencrypt:
 
+services:
 
 ######################################################################################
 #####################         TRAEFIK PROXY CONTAINER          #######################
@@ -34,19 +36,17 @@ services:
       - "--api.insecure=true"
       - "--api.dashboard=true"
       - "--log.level=DEBUG"
+      - "--log.format=json"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
-      - "--providers.file.filename=/dynamic_config.yml"
       - "--entrypoints.websecure.address=:443"
       - "--entryPoints.metrics.address=:8082"
       - "--metrics.prometheus.entryPoint=metrics"
       - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
-      # TESTING
       - "--certificatesresolvers.myresolver.acme.email=$EMAIL"
       - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
     volumes:
-      - "./traefik/letsencrypt:/letsencrypt"
-      - "./traefik/config/dynamic_config.yml:/dynamic_config.yml"
+      - "traefik_letsencrypt:/letsencrypt"
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
     networks:
       - monitor-net
@@ -67,7 +67,7 @@ services:
     depends_on:
       - postgres
     volumes:
-      - ./graph-node-configs:/root/graph-node-configs/
+      - ./graph-node-configs/config.toml:/root/graph-node-configs/config.toml
     environment:
       GRAPH_NODE_CONFIG: /root/graph-node-configs/config.toml
       postgres_host: ${DB_HOST:-postgres}
