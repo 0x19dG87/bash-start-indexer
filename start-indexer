@@ -107,7 +107,7 @@ fi
 
 if [ -z "$OPERATOR_SEED_PHRASE_MAINNET" ] && has_param '-m' "$@"
 then
-    echo -e "\e[1;32m Please enter your operator seed phrase for mainnet: \e[0m"
+    echo -e "\e[1;31m Please enter your operator seed phrase for mainnet: \e[0m"
     read OPERATOR_SEED_PHRASE_MAINNET
     sed -i "s/OPERATOR_SEED_PHRASE_MAINNET=.*/OPERATOR_SEED_PHRASE_MAINNET=$OPERATOR_SEED_PHRASE_MAINNET/" "$ENV_FILE"
 fi
@@ -122,7 +122,7 @@ fi
 
 if [ -z "$OPERATOR_SEED_PHRASE_TESTNET" ] && has_param '-t' "$@"
 then
-    echo -e "\e[1;32m Please enter your operator seed phrase for testnet: \e[0m"
+    echo -e "\e[1;31m Please enter your operator seed phrase for testnet: \e[0m"
     read OPERATOR_SEED_PHRASE_TESTNET
     sed -i "s/OPERATOR_SEED_PHRASE_TESTNET=.*/OPERATOR_SEED_PHRASE_TESTNET=$OPERATOR_SEED_PHRASE_TESTNET/" "$ENV_FILE"
 fi
@@ -137,7 +137,7 @@ fi
 
 if [ -z "$TXN_RPC_MAINNET" ] && has_param '-m' "$@"
 then
-    echo -e "\e[1;32m Please enter your mainnet (ethereum) rpc: \e[0m"
+    echo -e "\e[1;31m Please enter your mainnet (ethereum) rpc: \e[0m"
     read TXN_RPC_MAINNET
     RPC_MAINNET_SYNC_RESULT=$(curl $TXN_RPC_MAINNET -X POST --data '{"method":"eth_syncing","params":[],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json")
     if [[ $RPC_MAINNET_SYNC_RESULT =~ "jsonrpc" ]]
@@ -151,7 +151,7 @@ fi
 
 if [ -z "$TXN_RPC_TESTNET" ] && has_param '-m' "$@"
 then
-    echo -e "\e[1;32m Please enter your testnet (goerli) rpc: \e[0m"
+    echo -e "\e[1;31m Please enter your testnet (goerli) rpc: \e[0m"
     read TXN_RPC_TESTNET
     RPC_TESTNET_SYNC_RESULT=$(curl $TXN_RPC_TESTNET -X POST --data '{"method":"eth_syncing","params":[],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json")
     if [[ $RPC_TESTNET_SYNC_RESULT =~ "jsonrpc" ]]
@@ -169,9 +169,9 @@ if [ ! -f $(pwd)/graph-node-configs/config.toml ]
 then
     while [ 1==1 ]
     do 
-        echo -e "\e[1;32m Please enter your chain name: \e[0m"
+        echo -e "\e[1;31m Please enter your chain name: \e[0m"
         read CHAIN_NAME
-        echo -e "\e[1;32m Please enter your chain rpc: \e[0m"
+        echo -e "\e[1;31m Please enter your chain rpc: \e[0m"
         read CHAIN_RPC
         RPC_CHAIN_SYNC_RESULT=$(curl $CHAIN_RPC -X POST --data '{"method":"eth_syncing","params":[],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json")
         if [[ $RPC_CHAIN_SYNC_RESULT =~ "jsonrpc" ]]
@@ -230,9 +230,9 @@ then
     arrVar+=("mainnet.yml")
 fi
 
+COMPOSE_FILE=$(joinByChar ':' ${arrVar[@]})
 
-sed -i "s/COMPOSE_FILE=.*/COMPOSE_FILE=$(joinByChar ':' ${arrVar[@]})/" "$ENV_FILE"
-
+sed -i "s/COMPOSE_FILE=.*/COMPOSE_FILE=$COMPOSE_FILE/" "$ENV_FILE"
 
 IFS=':' read -ra FILES <<< ${COMPOSE_FILE}
 for i in "${FILES[@]}"; do STARTUP+="-f $(pwd)/$i "; done
@@ -243,10 +243,7 @@ for arg do
   set -- "$@" "$arg"
 done
 
-echo $STARTUP;
-
 docker-compose ${STARTUP} up -d --remove-orphans --build ${@}
-
 
 if has_param '-m' "$@";
 then
@@ -272,3 +269,5 @@ echo "Admin: $ADMIN_USER"
 echo "Password: $ADMIN_PASSWORD"
 echo " "
 echo " "
+
+echo "! If you want to setup new environment you have to remove .env, init/staking-wallet-mainnet, init/staking-wallet-testnet, graph-node-configs/config.toml files !"

@@ -6,5 +6,5 @@ datasources:
     name: graphql
     orgId: 1
     type: fifemon-graphql-datasource
-    url: https://api.thegraph.com/subgraphs/name/graphprotocol/graph-network-goerli
+    url: https://api.thegraph.com/subgraphs/name/graphprotocol/graph-network-testnet
     version: 1

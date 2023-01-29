@@ -9,8 +9,6 @@ OPERATOR_WALLET_MAINNET=$(tmpfile=$(mktemp) && echo "$1" > "$tmpfile" && \
 OPERATOR_WALLET_ADDRESS_MAINNET=$(echo "$OPERATOR_WALLET_MAINNET" | grep Address: | grep -o -E '0x[a-fA-F0-9]{40}' | tr '[:upper:]' '[:lower:]')
 OPERATOR_WALLET_BALANCE_MAINNET=$(echo "$OPERATOR_WALLET_MAINNET" | grep Balance: | grep -o -E '([0-9]+\.[0-9]+)')
 
-echo "here"
-
 if [ -z "$OPERATOR_WALLET_ADDRESS_MAINNET" ]
 then
 	echo "No opperator wallet found. Wrong seed phrase." 1>&2
