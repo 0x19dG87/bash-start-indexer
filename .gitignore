@@ -18,5 +18,6 @@ init/staking-wallet-mainnet
 init/staking-wallet-testnet
 init/
 graph-node-configs/config.toml
+postgres-socket/
 
 *~
