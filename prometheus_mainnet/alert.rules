@@ -143,7 +143,7 @@ groups:
   - alert: nginx_high_memory
     expr: sum(container_memory_usage_bytes{name="nginx-proxy"}) > 1200000000
     for: 30s
-    labels:`
+    labels:
       severity: warning
     annotations:
       summary: "Nginx high memory usage"
