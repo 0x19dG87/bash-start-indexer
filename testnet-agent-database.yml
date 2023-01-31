@@ -24,7 +24,7 @@ services:
 
 
   postgres-testnet-agent:
-    image: postgres:13.6
+    image: postgres:15.1
     container_name: postgres-testnet-agent
     command: ["postgres", "-c", "shared_preload_libraries=pg_stat_statements"]
     restart: unless-stopped
