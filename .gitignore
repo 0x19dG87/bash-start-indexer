@@ -19,5 +19,6 @@ init/staking-wallet-testnet
 init/
 graph-node-configs/config.toml
 postgres-socket/
+traefik/
 
 *~
