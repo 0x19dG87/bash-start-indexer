@@ -8,8 +8,8 @@ x-logging:
   driver: local
 
 networks:
-  monitor-net:
-    driver: bridge
+  graph_net:
+    name: graph_net
 
 volumes:
     prometheus_data_testnet: {}
@@ -31,7 +31,7 @@ services:
       GEO_COORDINATES: ${GEO_COORDINATES:-69.42069 69.42069}
     tty: true
     networks:
-      - monitor-net
+      - graph_net
     logging: *default-logging
     volumes:
       - ./cli/scripts:/home/graph/scripts
@@ -72,7 +72,7 @@ services:
       - 7300
       - 7600
     networks:
-      - monitor-net
+      - graph_net
     restart: unless-stopped
     logging: *default-logging
     labels:
@@ -103,7 +103,7 @@ services:
       - '--indexer-agent-epoch-subgraph-endpoint=${INDEXER_AGENT_EPOCH_SUBGRAPH_ENDPOINT_TESTNET:-https://api.thegraph.com/subgraphs/name/graphprotocol/goerli-epoch-block-oracle}'
     tty: true
     networks:
-       - monitor-net
+       - graph_net
     restart: unless-stopped
     logging: *default-logging
       
@@ -158,7 +158,7 @@ services:
       INDEXER_AGENT_OFFCHAIN_SUBGRAPHS: ${INDEXER_AGENT_OFFCHAIN_SUBGRAPHS}
       INDEXER_AGENT_GAS_PRICE_MAX: ${INDEXER_AGENT_GAS_PRICE_MAX_TESTNET:-50}
     networks:
-      - monitor-net
+      - graph_net
     restart: unless-stopped
     logging: *default-logging
 
@@ -208,7 +208,7 @@ services:
       - 8030
       - 8040
     networks:
-      - monitor-net
+      - graph_net
 
       
 ######################################################################################
@@ -234,7 +234,7 @@ services:
     expose:
       - 9090
     networks:
-      - monitor-net
+      - graph_net
     labels:
       - "org.label-schema.group=monitoring"
       - "traefik.enable=true"
@@ -278,7 +278,7 @@ services:
     expose:
       - 3000
     networks:
-      - monitor-net
+      - graph_net
     labels:
       - "org.label-schema.group=monitoring"
       - "traefik.enable=true"

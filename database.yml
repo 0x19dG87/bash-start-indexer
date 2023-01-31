@@ -8,8 +8,9 @@ x-logging:
   driver: local
 
 networks:
-  monitor-net:
-    driver: bridge
+  graph_net:
+    name: graph_net
+    
 
 volumes:
     postgres_data: {}
@@ -23,7 +24,7 @@ services:
 
 
   postgres:
-    image: postgres:15.1
+    image: postgres:13.6
     container_name: postgres
     command: ["postgres", "-c", "shared_preload_libraries=pg_stat_statements"]
     restart: unless-stopped
@@ -35,7 +36,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./postgres-socket:/var/run/postgresql
     networks:
-      - monitor-net
+      - graph_net
     expose:
       - 5432
     logging: *default-logging

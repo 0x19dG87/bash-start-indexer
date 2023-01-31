@@ -8,8 +8,8 @@ x-logging:
   driver: local
 
 networks:
-  monitor-net:
-    driver: bridge
+  graph_net:
+    name: graph_net
 
 volumes:
     postgres_mainnet_agent_data: {}
@@ -24,7 +24,7 @@ services:
 
 
   postgres-mainnet-agent:
-    image: postgres:15.1
+    image: postgres:13.6
     container_name: postgres-mainnet-agent
     command: ["postgres", "-c", "shared_preload_libraries=pg_stat_statements"]
     restart: unless-stopped
@@ -35,7 +35,7 @@ services:
     volumes:
       - postgres_mainnet_agent_data:/var/lib/postgresql/data
     networks:
-      - monitor-net
+      - graph_net
     expose:
       - 5432
     logging: *default-logging

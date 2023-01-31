@@ -201,7 +201,7 @@ joinByChar() {
   echo "$*"
 }
 
-arrVar=("base.yml" "monitoring.yml")
+arrVar=("proxy.yml" "base.yml" "monitoring.yml")
 
 if has_param '--external-database' "$@";
 then

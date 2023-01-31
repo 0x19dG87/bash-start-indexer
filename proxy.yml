@@ -1,0 +1,55 @@
+version: '2.1'
+
+x-logging:
+  &default-logging
+  options:
+    max-file: '1'
+    compress: 'false'
+  driver: local
+
+networks:
+  graph_net:
+    name: graph_net
+
+volumes:
+  traefik_letsencrypt:
+
+services:
+
+######################################################################################
+#####################         TRAEFIK PROXY CONTAINER          #######################
+######################################################################################      
+
+  traefik:
+    image: traefik:latest
+    container_name: traefik
+    restart: always
+    expose:
+      - "8082"
+    ports:
+      - "443:443"
+    command:
+      - "--api=false"
+      - "--api.insecure=false"
+      - "--api.dashboard=false"
+      - "--log.level=DEBUG"
+      - "--log.format=json"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.file.directory=/custom"
+      - "--providers.file.watch=true"
+      - "--entrypoints.websecure.address=:443"
+      - "--entryPoints.metrics.address=:8082"
+      - "--metrics.prometheus.entryPoint=metrics"
+      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
+      - "--certificatesresolvers.myresolver.acme.email=$EMAIL"
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+    volumes:
+      - "traefik_letsencrypt:/letsencrypt"
+      - "./traefik/custom/:/custom/:ro"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    networks:
+      - graph_net
+    labels:
+      - "traefik.enable=true"
+    logging: *default-logging
