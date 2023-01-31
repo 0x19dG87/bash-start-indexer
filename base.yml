@@ -8,53 +8,13 @@ x-logging:
   driver: local
 
 networks:
-  monitor-net:
-    driver: bridge
+  graph_net:
+    name: graph_net
 
 volumes:
   traefik_letsencrypt:
 
 services:
-
-######################################################################################
-#####################         TRAEFIK PROXY CONTAINER          #######################
-######################################################################################      
-
-
-  traefik:
-    image: traefik:latest
-    container_name: traefik
-    restart: always
-    expose:
-      - "8082"
-    ports:
-      - "443:443"
-      - "80:80"
-      - "127.0.0.1:8080:8080"
-    command:
-      - "--api=true"
-      - "--api.insecure=true"
-      - "--api.dashboard=true"
-      - "--log.level=DEBUG"
-      - "--log.format=json"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.websecure.address=:443"
-      - "--entryPoints.metrics.address=:8082"
-      - "--metrics.prometheus.entryPoint=metrics"
-      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
-      - "--certificatesresolvers.myresolver.acme.email=$EMAIL"
-      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
-    volumes:
-      - "traefik_letsencrypt:/letsencrypt"
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
-    networks:
-      - monitor-net
-    labels:
-      - "traefik.enable=true"
-    logging: *default-logging
-      
-
   
 ######################################################################################
 #####################           INDEX NODE CONTAINER 0         #######################
@@ -95,7 +55,7 @@ services:
       - 8030
       - 8040
     networks:
-      - monitor-net
+      - graph_net
     logging: *default-logging
 
 

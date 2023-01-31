@@ -8,8 +8,8 @@ x-logging:
   driver: local
 
 networks:
-  monitor-net:
-    driver: bridge
+  graph_net:
+    name: graph_net
 
 services:
 
@@ -33,7 +33,7 @@ services:
     expose:
       - 9093
     networks:
-      - monitor-net
+      - graph_net
     labels:
       org.label-schema.group: "monitoring"
     logging: *default-logging
@@ -62,7 +62,7 @@ services:
     expose:
       - 9100
     networks:
-      - monitor-net
+      - graph_net
     labels:
       org.label-schema.group: "monitoring"
     logging: *default-logging
@@ -88,7 +88,7 @@ services:
     expose:
       - 8080
     networks:
-      - monitor-net
+      - graph_net
     labels:
       org.label-schema.group: "monitoring"
     logging: *default-logging
@@ -108,7 +108,7 @@ services:
     expose:
       - 9091
     networks:
-      - monitor-net
+      - graph_net
     labels:
       org.label-schema.group: "monitoring"
     logging: *default-logging
