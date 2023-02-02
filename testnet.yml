@@ -9,7 +9,13 @@ x-logging:
 
 networks:
   graph_net:
+    driver: bridge
     name: graph_net
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1
 
 volumes:
     prometheus_data_testnet: {}

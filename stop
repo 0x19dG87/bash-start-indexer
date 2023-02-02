@@ -6,12 +6,6 @@ source <(cat "$ENV_FILE" | sed -e '/^#/d;/^\s*$/d' -e "s/'/'\\\''/g" -e "s/=\(.*
 set +a
 
 IFS=':' read -ra FILES <<< ${COMPOSE_FILE}
-for i in "${FILES[@]}"; do SHUTDOWN+="-f $(pwd)/$i "; done
+for i in "${FILES[@]}"; do [ "$i" != "proxy.yml" ] && SHUTDOWN+="-f $(pwd)/$i "; done
 
-for arg do
-  shift
-  [ "$arg" = "--remove-orphans" ] && continue
-  set -- "$@" "$arg"
-done
-
-docker-compose ${SHUTDOWN} down --remove-orphans ${@}
+docker-compose ${SHUTDOWN} down ${@} #--remove-orphans
