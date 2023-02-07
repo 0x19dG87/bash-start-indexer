@@ -100,7 +100,7 @@ services:
 ######################################################################################
 
   poifier-mainnet:
-    image: grassets/poifier-client:latest
+    image: grassets/poifier-client:v2.0.3
     container_name: poifier-mainnet
     depends_on:
       - index-node-0

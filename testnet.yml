@@ -97,7 +97,7 @@ services:
 ######################################################################################
 
   poifier-testnet:
-    image: grassets/poifier-client
+    image: grassets/poifier-client:v2.0.3
     container_name: poifier-testnet
     depends_on:
       - index-node-0
