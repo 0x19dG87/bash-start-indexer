@@ -48,6 +48,7 @@ services:
       - "--accesslog.fields.names.DownstreamStatus=keep"
       - "--accesslog.fields.names.RequestMethod=keep"
       - "--accesslog.fields.names.RequestPath=keep"
+      - "--accesslog.fields.names.RequestAddr=keep"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--providers.file.directory=/custom"
