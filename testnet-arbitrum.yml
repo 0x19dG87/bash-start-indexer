@@ -1,0 +1,291 @@
+version: '2.1'
+
+x-logging:
+  &default-logging
+  options:
+    max-file: '1'
+    compress: 'false'
+  driver: local
+
+networks:
+  graph_net:
+    driver: bridge
+    name: graph_net
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1
+
+volumes:
+    prometheus_data_testnet_arbitrum: {}
+    grafana_data_testnet_arbitrum: {}
+
+services:
+
+
+######################################################################################
+#####################        CLI TESTNET CONTAINER             #######################
+######################################################################################
+
+  cli-testnet-arbitrum:
+    build:
+      context: ./cli_testnet_arbitrum
+    container_name: cli-testnet-arbitrum
+    restart: unless-stopped
+    environment:
+      GEO_COORDINATES: ${GEO_COORDINATES:-69.42069 69.42069}
+    tty: true
+    networks:
+      - graph_net
+    logging: *default-logging
+    volumes:
+      - ./cli/scripts:/home/graph/scripts
+
+
+
+######################################################################################
+#####################     INDEXER SERVICE TESTNET CONTAINER    #######################
+######################################################################################
+
+  indexer-service-testnet-arbitrum:
+    image: ${INDEXER_SERVICE_TESTNET_VERSION:-ghcr.io/graphprotocol/indexer-service:v0.20.11}
+    container_name: indexer-service-testnet-arbitrum
+    depends_on:
+      - index-node-0
+      - query-node-2
+      - postgres-testnet-agent-arbitrum
+    environment:
+      INDEXER_SERVICE_FREE_QUERY_AUTH_TOKEN: ${FREE_QUERY_AUTH_TOKEN}
+      INDEXER_SERVICE_MNEMONIC: ${OPERATOR_SEED_PHRASE_TESTNET}
+      INDEXER_SERVICE_INDEXER_ADDRESS: ${STAKING_WALLET_ADDRESS_TESTNET}
+      INDEXER_SERVICE_PORT: 7600
+      INDEXER_SERVICE_ETHEREUM_NETWORK: arbitrum-goerli
+      INDEXER_SERVICE_ETHEREUM: ${TXN_RPC_TESTNET_ARBITRUM}
+      INDEXER_SERVICE_GRAPH_NODE_QUERY_ENDPOINT: http://query-node-2:8000
+      INDEXER_SERVICE_GRAPH_NODE_STATUS_ENDPOINT: http://index-node-0:8030/graphql
+      INDEXER_SERVICE_NETWORK_SUBGRAPH_ENDPOINT: ${INDEXER_SERVICE_NETWORK_SUBGRAPH_ENDPOINT_TESTNET_ARBITRUM:-https://api.thegraph.com/subgraphs/name/graphprotocol/graph-network-arbitrum-goerli}
+      INDEXER_SERVICE_NETWORK_SUBGRAPH_DEPLOYMENT: ${NETWORK_SUBGRAPH_DEPLOYMENT_TESTNET}
+      INDEXER_SERVICE_POSTGRES_HOST: ${INDEXER_DB_HOST:-postgres-testnet-agent-arbitrum}
+      INDEXER_SERVICE_POSTGRES_USERNAME: ${DB_USER:-graph-node}
+      INDEXER_SERVICE_POSTGRES_PASSWORD: ${DB_PASS:-db-password}
+      INDEXER_SERVICE_POSTGRES_DATABASE: ${INDEXER_DB_NAME_TESTNET:-indexer-agent-testnet-arbitrum}
+      INDEXER_SERVICE_WALLET_WORKER_THREADS: ${WORKER_THREADS_PER_INDEXER_SERVICE:-8}
+      INDEXER_SERVICE_CLIENT_SIGNER_ADDRESS: "0xac01B0b3B2Dc5D8E0D484c02c4d077C15C96a7b4"
+      SKIP_EVM_VALIDATION: "true"
+    expose:
+      - 7300
+      - 7600
+    networks:
+      - graph_net
+    restart: unless-stopped
+    logging: *default-logging
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.middlewares.indexer-testnet-arbitrum-stripprefix.stripprefix.prefixes=/testnet-arbitrum"
+      - "traefik.http.services.indexer-testnet-arbitrum.loadbalancer.server.port=7600"
+      - "traefik.http.routers.indexer-testnet-arbitrum.entrypoints=websecure"
+      - "traefik.http.routers.indexer-testnet-arbitrum.tls.certresolver=myresolver"
+      - "traefik.http.routers.indexer-testnet-arbitrum.rule=Host(`$DOMAIN`) && PathPrefix(`/testnet-arbitrum`)"
+      - "traefik.http.routers.indexer-testnet-arbitrum.middlewares=indexer-testnet-arbitrum-stripprefix"
+      
+    
+
+######################################################################################
+#####################       POIFIER TESTNET CONTAINER          #######################
+######################################################################################
+
+  # poifier-testnet:
+  #   image: grassets/poifier-client:v2.0.3
+  #   container_name: poifier-testnet
+  #   depends_on:
+  #     - index-node-0
+  #   command:
+  #     - '--poifier-server=https://goerli.poifier.io'
+  #     - '--graph-node-status-endpoint=http://index-node-0:8030/graphql'
+  #     - '--mnemonic=${OPERATOR_SEED_PHRASE_TESTNET}'
+  #     - '--indexer-address=${STAKING_WALLET_ADDRESS_TESTNET}'
+  #     - '--indexer-agent-epoch-subgraph-endpoint=${INDEXER_AGENT_EPOCH_SUBGRAPH_ENDPOINT_TESTNET:-https://api.thegraph.com/subgraphs/name/graphprotocol/goerli-epoch-block-oracle}'
+  #   tty: true
+  #   networks:
+  #      - graph_net
+  #   restart: unless-stopped
+  #   logging: *default-logging
+      
+
+######################################################################################
+#####################     INDEXER AGENT TESTNET CONTAINER      #######################
+######################################################################################
+
+  indexer-agent-testnet-arbitrum:
+    image: ${INDEXER_AGENT_TESTNET_VERSION:-ghcr.io/graphprotocol/indexer-agent:v0.20.11}
+    container_name: indexer-agent-testnet-arbitrum
+    depends_on:
+      - index-node-0
+      - query-node-2
+      - postgres-testnet-agent-arbitrum
+    expose:
+      - 7300
+      - 8000
+      - 8001
+      - 8002
+    environment:
+      INDEXER_AGENT_MNEMONIC: ${OPERATOR_SEED_PHRASE_TESTNET}
+      INDEXER_AGENT_INDEXER_ADDRESS: ${STAKING_WALLET_ADDRESS_TESTNET}
+      INDEXER_AGENT_INDEX_NODE_IDS: "index_node_0"
+      INDEXER_AGENT_INJECT_DAI: "true"
+      INDEXER_AGENT_REBATE_CLAIM_THRESHOLD: ${REBATE_CLAIM_THRESHOLD:-0}
+      INDEXER_AGENT_REBATE_CLAIM_BATCH_THRESHOLD: ${REBATE_CLAIM_BATCH_THRESHOLD:-0}
+      INDEXER_AGENT_REBATE_CLAIM_MAX_BATCH_SIZE: ${REBATE_CLAIM_MAX_BATCH_SIZE:-100}
+      INDEXER_AGENT_VOUCHER_REDEMPTION_THRESHOLD: ${VOUCHER_REDEMPTION_THRESHOLD:-0}
+      INDEXER_AGENT_VOUCHER_REDEMPTION_BATCH_THRESHOLD: ${VOUCHER_REDEMPTION_BATCH_THRESHOLD:-0}
+      INDEXER_AGENT_VOUCHER_REDEMPTION_MAX_BATCH_SIZE: ${VOUCHER_REDEMPTION_MAX_BATCH_SIZE:-100}
+      INDEXER_AGENT_ETHEREUM_NETWORK: arbitrum-goerli
+      INDEXER_AGENT_ETHEREUM: ${TXN_RPC_TESTNET_ARBITRUM}
+      INDEXER_AGENT_GRAPH_NODE_QUERY_ENDPOINT: http://query-node-2:8000
+      INDEXER_AGENT_GRAPH_NODE_STATUS_ENDPOINT: http://index-node-0:8030/graphql
+      INDEXER_AGENT_GRAPH_NODE_ADMIN_ENDPOINT: http://index-node-0:8020
+      INDEXER_AGENT_PUBLIC_INDEXER_URL: 'https://${DOMAIN}/testnet-arbitrum/'
+      INDEXER_AGENT_INDEXER_GEO_COORDINATES: ${GEO_COORDINATES:-60.16952 24.93545}
+      INDEXER_AGENT_NETWORK_SUBGRAPH_ENDPOINT: ${INDEXER_AGENT_NETWORK_SUBGRAPH_ENDPOINT_TESTNET_ARBITRUM:-https://api.thegraph.com/subgraphs/name/graphprotocol/graph-network-arbitrum-goerli}
+      INDEXER_AGENT_NETWORK_SUBGRAPH_DEPLOYMENT: ${NETWORK_SUBGRAPH_DEPLOYMENT_TESTNET}
+      INDEXER_AGENT_EPOCH_SUBGRAPH_ENDPOINT: ${INDEXER_AGENT_EPOCH_SUBGRAPH_ENDPOINT_TESTNET_ARBITRUM:-https://api.thegraph.com/subgraphs/name/juanmardefago/arb-goerli-epoch-block-oracle}
+      INDEXER_AGENT_POSTGRES_HOST: ${INDEXER_DB_HOST:-postgres-testnet-agent-arbitrum}
+      INDEXER_AGENT_POSTGRES_USERNAME: ${DB_USER:-graph-node}
+      INDEXER_AGENT_POSTGRES_PASSWORD: ${DB_PASS:-db-password}
+      INDEXER_AGENT_POSTGRES_DATABASE: ${INDEXER_DB_NAME_TESTNET:-indexer-agent-testnet-arbitrum}
+      INDEXER_AGENT_DAI_CONTRACT: "0x9e7e607afd22906f7da6f1ec8f432d6f244278be"
+      INDEXER_AGENT_COLLECT_RECEIPTS_ENDPOINT: https://gateway-testnet-arbitrum.network.thegraph.com/collect-receipts
+      INDEXER_AGENT_OFFCHAIN_SUBGRAPHS: ${INDEXER_AGENT_OFFCHAIN_SUBGRAPHS}
+      INDEXER_AGENT_GAS_PRICE_MAX: ${INDEXER_AGENT_GAS_PRICE_MAX_TESTNET:-50}
+    networks:
+      - graph_net
+    restart: unless-stopped
+    logging: *default-logging
+
+
+
+######################################################################################
+#####################       QUERY NODE CONTAINER TESTNET       #######################
+######################################################################################
+
+
+  query-node-2:
+    image: ${GRAPH_NODE_VERSION:-graphprotocol/graph-node:v0.29.0}
+    container_name: query-node-2
+    depends_on:
+      - postgres
+    volumes:
+      - ./graph-node-configs/config.toml:/root/graph-node-configs/config.toml
+      - ./postgres-socket:/var/run/postgresql
+    environment:
+      GRAPH_NODE_CONFIG: /root/graph-node-configs/config.toml
+      postgres_host: ${DB_HOST:-postgres}
+      postgres_user: ${DB_USER:-graph-node}
+      postgres_pass: ${DB_PASS:-db-password}
+      postgres_db: ${GRAPH_NODE_DB_NAME:-graph-node}
+      ipfs: '${IPFS_ENDPOINT:-https://ipfs.network.thegraph.com/ipfs/}'
+      node_role: query-node
+      node_id: query_node_2
+      RUST_LOG: INFO
+      GRAPH_LOG: INFO
+      GRAPH_ETH_CALL_GAS: 50000000
+      GRAPH_GETH_ETH_CALL_ERRORS: "out of gas"
+      GRAPH_MAX_GAS_PER_HANDLER: 1000000000000000
+      GRAPH_LOG_QUERY_TIMING: gql
+      EXPERIMENTAL_SUBGRAPH_VERSION_SWITCHING_MODE: synced
+      GRAPH_KILL_IF_UNRESPONSIVE: "true"
+      GRAPH_LOG_QUERY_TIMING: ${GRAPH_LOG_QUERY_TIMING:-gql}
+      GRAPH_ALLOW_NON_DETERMINISTIC_FULLTEXT_SEARCH: ${FULLTEXT_SEARCH:-true}
+    restart: unless-stopped
+    logging: *default-logging
+    expose:
+      - 8001
+      - 8000
+      - 8020
+      - 8030
+      - 8040
+    networks:
+      - graph_net
+
+      
+######################################################################################
+#####################      PROMETHEUS TESTNET CONTAINER        #######################
+######################################################################################
+
+
+
+  prometheus-testnet-arbitrum:
+    image: prom/prometheus
+    container_name: prometheus-testnet-arbitrum
+    volumes:
+      - ./prometheus_testnet_arbitrum:/etc/prometheus
+      - prometheus_data_testnet_arbitrum:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=1y'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    expose:
+      - 9090
+    networks:
+      - graph_net
+    labels:
+      - "org.label-schema.group=monitoring"
+      - "traefik.enable=true"
+      - "traefik.http.middlewares.prometheus-testnet-arbitrum-stripprefix.stripprefix.prefixes=/prometheus-testnet-arbitrum"
+      - "traefik.http.services.prometheus-testnet-arbitrum.loadbalancer.server.port=9090"
+      - "traefik.http.routers.prometheus-testnet-arbitrum.entrypoints=websecure"
+      - "traefik.http.routers.prometheus-testnet-arbitrum.tls.certresolver=myresolver"
+      - "traefik.http.routers.prometheus-testnet-arbitrum.rule=Host(`$DOMAIN`) && PathPrefix(`/prometheus-testnet-arbitrum`)"
+      - "traefik.http.routers.prometheus-testnet-arbitrum.middlewares=prometheus-testnet-arbitrum-stripprefix"      
+    logging: *default-logging
+
+
+
+######################################################################################
+#####################           GRAFANA TESTNET CONTAINER              ###############
+######################################################################################
+
+
+
+  grafana-testnet-arbitrum:
+    image: grafana/grafana
+    container_name: grafana-testnet-arbitrum
+    depends_on:
+      - postgres
+    volumes:
+      - grafana_data_testnet_arbitrum:/var/lib/grafana
+      - ./grafana_testnet_arbitrum/provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_USER=${ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SECURITY_DISABLE_BRUTE_FORCE_LOGIN_PROTECTION=true
+      - GF_SERVER_ROOT_URL=https://${DOMAIN}/grafana-testnet-arbitrum
+      - postgres_host=${DB_HOST:-postgres}
+      - postgres_user=${DB_USER:-graph-node}
+      - postgres_pass=${DB_PASS:-db-password}
+      - postgres_db=${GRAPH_NODE_DB_NAME:-graph-node}
+      - GF_INSTALL_PLUGINS=fifemon-graphql-datasource
+      - subgraph_endpoint=${SUBGRAPH_ENDPOINT:-https://gateway.testnet.thegraph.com/network}
+    restart: unless-stopped
+    expose:
+      - 3000
+    networks:
+      - graph_net
+    labels:
+      - "org.label-schema.group=monitoring"
+      - "traefik.enable=true"
+      - "traefik.http.middlewares.grafana-testnet-arbitrum-stripprefix.stripprefix.prefixes=/grafana-testnet-arbitrum"
+      - "traefik.http.services.grafana-testnet-arbitrum.loadbalancer.server.port=3000"
+      - "traefik.http.routers.grafana-testnet-arbitrum.entrypoints=websecure"
+      - "traefik.http.routers.grafana-testnet-arbitrum.tls.certresolver=myresolver"
+      - "traefik.http.routers.grafana-testnet-arbitrum.rule=Host(`$DOMAIN`) && PathPrefix(`/grafana-testnet-arbitrum`)"
+      - "traefik.http.routers.grafana-testnet-arbitrum.middlewares=grafana-testnet-arbitrum-stripprefix"      
+    logging: *default-logging
+
+
