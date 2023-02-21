@@ -95,7 +95,7 @@ then
     sed -i "s/INDEXER_DB_NAME_MAINNET=.*/INDEXER_DB_NAME_MAINNET=$INDEXER_DB_NAME_MAINNET/" "$ENV_FILE"
 fi
 
-if [ -z "$INDEXER_DB_NAME_TESTNET" ] && has_param '-t' "$@"
+if [ -z "$INDEXER_DB_NAME_TESTNET" ] && (has_param '-t' "$@" || has_param '-ta' "$@")
 then
     echo -e "\e[1;32m Please enter the name of the database used by the testnet Indexer agent/service nodes or leave empty: \e[0m"
     read INDEXER_DB_NAME_TESTNET
@@ -120,14 +120,14 @@ then
     sed -i "s/STAKING_WALLET_ADDRESS_MAINNET=.*/STAKING_WALLET_ADDRESS_MAINNET=$STAKING_WALLET_ADDRESS_MAINNET/" "$ENV_FILE"
 fi
 
-if [ -z "$OPERATOR_SEED_PHRASE_TESTNET" ] && has_param '-t' "$@"
+if [ -z "$OPERATOR_SEED_PHRASE_TESTNET" ] && (has_param '-t' "$@" || has_param '-ta' "$@")
 then
     echo -e "\e[1;31m Please enter your operator seed phrase for testnet: \e[0m"
     read OPERATOR_SEED_PHRASE_TESTNET
     sed -i "s/OPERATOR_SEED_PHRASE_TESTNET=.*/OPERATOR_SEED_PHRASE_TESTNET=$OPERATOR_SEED_PHRASE_TESTNET/" "$ENV_FILE"
 fi
 
-if [ -z "$STAKING_WALLET_ADDRESS_TESTNET" ] && has_param '-t' "$@"
+if [ -z "$STAKING_WALLET_ADDRESS_TESTNET" ] && (has_param '-t' "$@" || has_param '-ta' "$@")
 then
     [ ! -f init/staking-wallet-testnet ] && (cd init && bash generate-staking-wallet-testnet.sh "$OPERATOR_SEED_PHRASE_TESTNET" || exit 2)
     [ ! -f init/staking-wallet-testnet ] && exit 1
@@ -149,7 +149,7 @@ then
     fi
 fi
 
-if [ -z "$TXN_RPC_TESTNET" ] && has_param '-m' "$@"
+if [ -z "$TXN_RPC_TESTNET" ] && has_param '-t' "$@"
 then
     echo -e "\e[1;31m Please enter your testnet (goerli) rpc: \e[0m"
     read TXN_RPC_TESTNET
@@ -159,6 +159,20 @@ then
         sed -i "s/TXN_RPC_TESTNET=.*/TXN_RPC_TESTNET=${TXN_RPC_TESTNET//\//\\\/}/" "$ENV_FILE"
     else 
         echo "Bad testnet (goerli) rpc > $TXN_RPC_TESTNET!"
+        exit 1
+    fi
+fi
+
+if [ -z "$TXN_RPC_TESTNET_ARBITRUM" ] && has_param '-ta' "$@"
+then
+    echo -e "\e[1;31m Please enter your testnet (arbitrum-goerli) rpc: \e[0m"
+    read TXN_RPC_TESTNET_ARBITRUM
+    RPC_TESTNET_ARB_SYNC_RESULT=$(curl $TXN_RPC_TESTNET_ARBITRUM -X POST --data '{"method":"eth_syncing","params":[],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json")
+    if [[ $RPC_TESTNET_ARB_SYNC_RESULT =~ "jsonrpc" ]]
+    then
+        sed -i "s/TXN_RPC_TESTNET_ARBITRUM=.*/TXN_RPC_TESTNET_ARBITRUM=${TXN_RPC_TESTNET_ARBITRUM//\//\\\/}/" "$ENV_FILE"
+    else 
+        echo "Bad testnet (arbitrum-goerli) rpc > $TXN_RPC_TESTNET_ARBITRUM!"
         exit 1
     fi
 fi
@@ -214,10 +228,20 @@ else
 	arrVar+=("testnet-agent-database.yml")
     fi
 
+    if has_param '-ta' "$@";
+    then
+	arrVar+=("testnet-arbitrum-agent-database.yml")
+    fi
+
     if has_param '-m' "$@";
     then
 	arrVar+=("mainnet-agent-database.yml")
     fi
+fi
+
+if has_param '-m' "$@";
+then
+    arrVar+=("mainnet.yml")
 fi
 
 if has_param '-t' "$@";
@@ -225,9 +249,9 @@ then
     arrVar+=("testnet.yml")
 fi
 
-if has_param '-m' "$@";
+if has_param '-ta' "$@";
 then
-    arrVar+=("mainnet.yml")
+    arrVar+=("testnet-arbitrum.yml")
 fi
 
 COMPOSE_FILE=$(joinByChar ':' ${arrVar[@]})
@@ -239,7 +263,7 @@ for i in "${FILES[@]}"; do STARTUP+="-f $(pwd)/$i "; done
 
 for arg do
   shift
-  [ "$arg" = "-t" ] || [ "$arg" = "-m" ] || [ "$arg" = "-d" ] || [ "$arg" = "--remove-orphans" ] || [ "$arg" = "--build" ]  && continue
+  [ "$arg" = "-t" ] || [ "$arg" = "-ta" ] || [ "$arg" = "-m" ] || [ "$arg" = "-d" ] || [ "$arg" = "--remove-orphans" ] || [ "$arg" = "--build" ]  && continue
   set -- "$@" "$arg"
 done
 
@@ -261,6 +285,15 @@ then
     echo "Your dashboard for testnet:"
     echo " "
     echo "$DOMAIN/grafana-testnet"
+fi
+
+if has_param '-ta' "$@";
+then
+    echo " "
+    echo " "
+    echo "Your dashboard for testnet arbitrum:"
+    echo " "
+    echo "$DOMAIN/grafana-testnet-arbitrum"
 fi
 
 echo " "
