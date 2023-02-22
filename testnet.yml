@@ -49,7 +49,7 @@ services:
 ######################################################################################
 
   indexer-service-testnet:
-    image: ${INDEXER_SERVICE_TESTNET_VERSION:-ghcr.io/graphprotocol/indexer-service:v0.20.11}
+    image: ${INDEXER_SERVICE_TESTNET_VERSION:-ghcr.io/graphprotocol/indexer-service:v0.20.12}
     container_name: indexer-service-testnet
     depends_on:
       - index-node-0
@@ -64,7 +64,7 @@ services:
       INDEXER_SERVICE_ETHEREUM: ${TXN_RPC_TESTNET}
       INDEXER_SERVICE_GRAPH_NODE_QUERY_ENDPOINT: http://query-node-1:8000
       INDEXER_SERVICE_GRAPH_NODE_STATUS_ENDPOINT: http://index-node-0:8030/graphql
-      INDEXER_SERVICE_NETWORK_SUBGRAPH_ENDPOINT: ${INDEXER_SERVICE_NETWORK_SUBGRAPH_ENDPOINT_TESTNET:-https://gateway.testnet.thegraph.com/network}
+      INDEXER_SERVICE_NETWORK_SUBGRAPH_ENDPOINT: ${INDEXER_SERVICE_NETWORK_SUBGRAPH_ENDPOINT_TESTNET:-https://api.thegraph.com/subgraphs/name/graphprotocol/graph-network-goerli}
       INDEXER_SERVICE_NETWORK_SUBGRAPH_DEPLOYMENT: ${NETWORK_SUBGRAPH_DEPLOYMENT_TESTNET}
       INDEXER_SERVICE_POSTGRES_HOST: ${INDEXER_DB_HOST:-postgres-testnet-agent}
       INDEXER_SERVICE_POSTGRES_USERNAME: ${DB_USER:-graph-node}
@@ -120,7 +120,7 @@ services:
 ######################################################################################
 
   indexer-agent-testnet:
-    image: ${INDEXER_AGENT_TESTNET_VERSION:-ghcr.io/graphprotocol/indexer-agent:v0.20.11}
+    image: ${INDEXER_AGENT_TESTNET_VERSION:-ghcr.io/graphprotocol/indexer-agent:v0.20.12}
     container_name: indexer-agent-testnet
     depends_on:
       - index-node-0
@@ -149,7 +149,7 @@ services:
       INDEXER_AGENT_GRAPH_NODE_ADMIN_ENDPOINT: http://index-node-0:8020
       INDEXER_AGENT_PUBLIC_INDEXER_URL: 'https://${DOMAIN}/testnet/'
       INDEXER_AGENT_INDEXER_GEO_COORDINATES: ${GEO_COORDINATES:-60.16952 24.93545}
-      INDEXER_AGENT_NETWORK_SUBGRAPH_ENDPOINT: ${INDEXER_AGENT_NETWORK_SUBGRAPH_ENDPOINT_TESTNET:-https://gateway.testnet.thegraph.com/network}
+      INDEXER_AGENT_NETWORK_SUBGRAPH_ENDPOINT: ${INDEXER_AGENT_NETWORK_SUBGRAPH_ENDPOINT_TESTNET:-https://api.thegraph.com/subgraphs/name/graphprotocol/graph-network-goerli}
       INDEXER_AGENT_NETWORK_SUBGRAPH_DEPLOYMENT: ${NETWORK_SUBGRAPH_DEPLOYMENT_TESTNET}
       INDEXER_AGENT_EPOCH_SUBGRAPH_ENDPOINT: ${INDEXER_AGENT_EPOCH_SUBGRAPH_ENDPOINT_TESTNET:-https://api.thegraph.com/subgraphs/name/graphprotocol/goerli-epoch-block-oracle}
       INDEXER_AGENT_POSTGRES_HOST: ${INDEXER_DB_HOST:-postgres-testnet-agent}
@@ -177,7 +177,7 @@ services:
 
 
   query-node-1:
-    image: ${GRAPH_NODE_VERSION:-graphprotocol/graph-node:v0.29.0}
+    image: ${GRAPH_NODE_VERSION:-graphprotocol/graph-node:v0.30.0-rc.0}
     container_name: query-node-1
     depends_on:
       - postgres
