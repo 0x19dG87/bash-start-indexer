@@ -49,7 +49,7 @@ services:
 ######################################################################################
 
   indexer-service-testnet-arbitrum:
-    image: ${INDEXER_SERVICE_TESTNET_VERSION:-ghcr.io/graphprotocol/indexer-service:v0.20.12}
+    image: ${INDEXER_SERVICE_TESTNET_VERSION:-ghcr.io/graphprotocol/indexer-service:v0.20.14}
     container_name: indexer-service-testnet-arbitrum
     depends_on:
       - index-node-0
@@ -118,7 +118,7 @@ services:
 ######################################################################################
 
   indexer-agent-testnet-arbitrum:
-    image: ${INDEXER_AGENT_TESTNET_VERSION:-ghcr.io/graphprotocol/indexer-agent:v0.20.12}
+    image: ${INDEXER_AGENT_TESTNET_VERSION:-ghcr.io/graphprotocol/indexer-agent:v0.20.14}
     container_name: indexer-agent-testnet-arbitrum
     depends_on:
       - index-node-0
