@@ -39,7 +39,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASS:-db-password}
       POSTGRES_DB: ${GRAPH_NODE_DB_NAME:-graph-node}
     volumes:
-      - /storage/indexer/postgres_data/_data:/var/lib/postgresql/data
+      - /indexer/postgres_data/_data:/var/lib/postgresql/data
       - ./postgres-socket:/var/run/postgresql
     networks:
       - graph_net
